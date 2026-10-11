@@ -1,0 +1,1181 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Panier Pur — Scannez, comprenez, choisissez pur</title>
+<meta name="description" content="Panier Pur analyse les produits alimentaires, cosmétiques, soins et d'entretien grâce à leur code-barre, et signale les additifs et substances à risque." />
+<style>
+  :root{
+    --bg:#040c0a;
+    --bg2:#07171300;
+    --card:rgba(255,255,255,.045);
+    --card-strong:rgba(255,255,255,.08);
+    --border:rgba(255,255,255,.09);
+    --mint:#34d399;
+    --mint2:#10b981;
+    --text:#e8f7f1;
+    --muted:#8fa99e;
+    --danger:#ef4444;
+    --warn:#f59e0b;
+    --ok:#22c55e;
+    --radius:24px;
+    --shadow:0 30px 80px -20px rgba(0,0,0,.6);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    min-height:100vh;
+    overflow-x:hidden;
+    line-height:1.5;
+  }
+  body::before{ /* fond aurora */
+    content:"";position:fixed;inset:-20%;z-index:-2;
+    background:
+      radial-gradient(40% 35% at 15% 20%, rgba(16,185,129,.22), transparent 70%),
+      radial-gradient(35% 30% at 85% 10%, rgba(52,211,153,.12), transparent 70%),
+      radial-gradient(45% 40% at 60% 90%, rgba(239,68,68,.10), transparent 70%),
+      radial-gradient(40% 35% at 10% 90%, rgba(245,158,11,.08), transparent 70%);
+    animation:aurora 22s ease-in-out infinite alternate;
+  }
+  @keyframes aurora{from{transform:translate3d(0,0,0) scale(1)}to{transform:translate3d(-3%,4%,0) scale(1.08)}}
+  .grain{position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.05;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");}
+  a{color:inherit;text-decoration:none}
+  button,input{font:inherit}
+  .wrap{width:min(1180px,92vw);margin:0 auto}
+
+  /* ---------- HEADER ---------- */
+  header{
+    position:sticky;top:0;z-index:50;
+    backdrop-filter:blur(18px) saturate(140%);
+    -webkit-backdrop-filter:blur(18px) saturate(140%);
+    background:rgba(4,12,10,.6);
+    border-bottom:1px solid var(--border);
+  }
+  .nav{display:flex;align-items:center;justify-content:space-between;height:72px}
+  .brand{display:flex;align-items:center;gap:12px;font-weight:800;font-size:1.25rem;letter-spacing:-.02em}
+  .brand svg{width:40px;height:40px;filter:drop-shadow(0 6px 14px rgba(52,211,153,.35))}
+  .brand span em{font-style:normal;background:linear-gradient(90deg,#6ee7b7,#34d399 40%,#a7f3d0);-webkit-background-clip:text;background-clip:text;color:transparent}
+  nav ul{display:flex;gap:28px;list-style:none;font-size:.95rem;color:var(--muted)}
+  nav ul a{transition:color .2s}
+  nav ul a:hover{color:var(--text)}
+  .btn{
+    display:inline-flex;align-items:center;gap:10px;border:0;cursor:pointer;
+    padding:14px 22px;border-radius:999px;font-weight:700;color:#03130d;
+    background:linear-gradient(120deg,#6ee7b7,#34d399 45%,#10b981);
+    box-shadow:0 10px 30px -8px rgba(52,211,153,.6), inset 0 1px 0 rgba(255,255,255,.5);
+    transition:transform .25s, box-shadow .25s;position:relative;overflow:hidden;
+  }
+  .btn::after{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.55) 50%,transparent 70%);transform:translateX(-120%);transition:transform .8s}
+  .btn:hover{transform:translateY(-2px);box-shadow:0 16px 40px -8px rgba(52,211,153,.75)}
+  .btn:hover::after{transform:translateX(120%)}
+  .btn.ghost{background:transparent;color:var(--text);border:1px solid var(--border);box-shadow:none}
+  .btn.ghost:hover{background:var(--card-strong)}
+  .btn svg{width:20px;height:20px}
+
+  /* ---------- HERO ---------- */
+  .hero{position:relative;padding:90px 0 60px;overflow:hidden}
+  .hero-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:40px;align-items:center}
+  .eyebrow{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;
+    background:var(--card-strong);border:1px solid var(--border);font-size:.85rem;color:#a7f3d0;
+    animation:fadeUp .8s both}
+  .eyebrow i{width:8px;height:8px;border-radius:50%;background:var(--mint);box-shadow:0 0 12px var(--mint);animation:pulse 2s infinite}
+  h1{font-size:clamp(2.6rem,6vw,4.6rem);line-height:1.02;letter-spacing:-.035em;font-weight:900;margin:22px 0 20px;animation:fadeUp .9s .1s both}
+  h1 .grad{background:linear-gradient(100deg,#6ee7b7 0%,#34d399 35%,#fde68a 70%,#fca5a5 100%);-webkit-background-clip:text;background-clip:text;color:transparent;background-size:200% auto;animation:shine 6s linear infinite}
+  @keyframes shine{to{background-position:200% center}}
+  .lead{font-size:1.15rem;color:var(--muted);max-width:52ch;animation:fadeUp .9s .2s both}
+  .hero-cta{display:flex;gap:14px;margin-top:34px;flex-wrap:wrap;animation:fadeUp .9s .3s both}
+  .hero-stats{display:flex;gap:34px;margin-top:44px;animation:fadeUp .9s .4s both}
+  .hero-stats b{display:block;font-size:1.7rem;font-weight:800}
+  .hero-stats span{font-size:.85rem;color:var(--muted)}
+  .hero-art{position:relative;height:520px;animation:fadeUp 1.1s .2s both}
+  .hero-art svg.main{position:absolute;inset:0;width:100%;height:100%;filter:drop-shadow(0 40px 60px rgba(0,0,0,.5))}
+  .float{animation:float 6s ease-in-out infinite}
+  .float.d2{animation-delay:-2s}.float.d3{animation-delay:-4s}
+  @keyframes float{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-16px) rotate(3deg)}}
+  .blob{position:absolute;border-radius:50%;filter:blur(60px);opacity:.55;z-index:-1;animation:float 9s ease-in-out infinite}
+
+  /* ---------- MARQUEE ---------- */
+  .marquee{overflow:hidden;border-block:1px solid var(--border);background:rgba(255,255,255,.02);padding:18px 0;margin-top:20px}
+  .marquee-track{display:flex;gap:56px;width:max-content;animation:marq 32s linear infinite;font-weight:700;color:#7dd3a8;text-transform:uppercase;letter-spacing:.14em;font-size:.85rem}
+  .marquee-track span{display:inline-flex;align-items:center;gap:56px;white-space:nowrap}
+  .marquee-track span::after{content:"◆";color:var(--mint);opacity:.6}
+  @keyframes marq{to{transform:translateX(-50%)}}
+
+  /* ---------- SECTIONS ---------- */
+  section{padding:96px 0;position:relative}
+  .kicker{color:var(--mint);font-weight:700;font-size:.85rem;text-transform:uppercase;letter-spacing:.16em}
+  h2{font-size:clamp(2rem,4vw,2.9rem);letter-spacing:-.03em;line-height:1.1;margin:12px 0 14px;font-weight:850}
+  .sub{color:var(--muted);max-width:60ch}
+  .reveal{opacity:0;transform:translateY(30px);transition:opacity .9s cubic-bezier(.2,.7,.2,1), transform .9s cubic-bezier(.2,.7,.2,1)}
+  .reveal.in{opacity:1;transform:none}
+
+  /* ---------- CATEGORIES ---------- */
+  .cats{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:48px}
+  .cat{
+    position:relative;overflow:hidden;cursor:pointer;border:1px solid var(--border);border-radius:var(--radius);
+    background:var(--card);padding:28px;text-align:left;color:var(--text);
+    transition:transform .35s cubic-bezier(.2,.7,.2,1), border-color .3s, box-shadow .3s;
+    min-height:210px;display:flex;flex-direction:column;justify-content:space-between;
+  }
+  .cat::before{content:"";position:absolute;inset:-1px;background:radial-gradient(260px circle at var(--mx,50%) var(--my,0%),var(--glow),transparent 60%);opacity:0;transition:opacity .4s;pointer-events:none}
+  .cat:hover{transform:translateY(-6px);border-color:rgba(255,255,255,.2);box-shadow:var(--shadow)}
+  .cat:hover::before{opacity:1}
+  .cat .ico{width:64px;height:64px;border-radius:20px;display:grid;place-items:center;background:var(--tint);box-shadow:inset 0 0 0 1px rgba(255,255,255,.15)}
+  .cat .ico svg{width:34px;height:34px;stroke:#fff;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .cat:hover .ico{animation:wobble .6s}
+  @keyframes wobble{30%{transform:rotate(-8deg) scale(1.08)}60%{transform:rotate(6deg)}}
+  .cat h3{font-size:1.25rem;margin-top:22px;font-weight:750}
+  .cat p{color:var(--muted);font-size:.95rem;margin-top:4px}
+  .cat .go{position:absolute;right:24px;top:24px;font-size:.8rem;color:var(--muted);opacity:.7;transition:.3s}
+  .cat:hover .go{color:var(--mint);opacity:1;transform:translateX(4px)}
+
+  /* ---------- SCANNER ---------- */
+  .scanner-box{
+    margin-top:44px;border-radius:32px;padding:44px;border:1px solid var(--border);
+    background:linear-gradient(160deg,rgba(255,255,255,.07),rgba(255,255,255,.01));
+    display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center;position:relative;overflow:hidden;
+  }
+  .scanner-box::after{content:"";position:absolute;width:420px;height:420px;border-radius:50%;right:-160px;top:-160px;background:radial-gradient(circle,rgba(52,211,153,.25),transparent 70%);pointer-events:none}
+  .barcode-art{height:200px;border-radius:20px;background:#fff;display:grid;place-items:center;position:relative;overflow:hidden;box-shadow:0 20px 50px -15px rgba(0,0,0,.6)}
+  .barcode-art svg{width:86%;height:auto}
+  .barcode-art .laser{position:absolute;left:7%;right:7%;height:3px;background:linear-gradient(90deg,transparent,#ef4444,transparent);box-shadow:0 0 14px #ef4444;animation:scan 2.2s ease-in-out infinite}
+  @keyframes scan{0%,100%{top:12%}50%{top:86%}}
+  .field{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
+  .field input{flex:1;min-width:220px;padding:16px 18px;border-radius:16px;border:1px solid var(--border);background:rgba(0,0,0,.35);color:var(--text);outline:none;transition:border .2s, box-shadow .2s;letter-spacing:.06em}
+  .field input:focus{border-color:var(--mint);box-shadow:0 0 0 4px rgba(52,211,153,.18)}
+  .chips{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}
+  .chip{padding:9px 14px;border-radius:999px;border:1px solid var(--border);background:var(--card);color:var(--muted);cursor:pointer;font-size:.9rem;transition:.25s}
+  .chip:hover{color:var(--text);border-color:rgba(255,255,255,.25)}
+  .chip.on{background:rgba(52,211,153,.14);border-color:rgba(52,211,153,.55);color:#a7f3d0}
+  .hint{font-size:.85rem;color:var(--muted);margin-top:14px}
+  .examples{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;align-items:center;color:var(--muted);font-size:.9rem}
+
+  /* ---------- RESULTS ---------- */
+  #resultSection{display:none}
+  #resultSection.show{display:block}
+  .result-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:28px;margin-top:40px;align-items:stretch}
+  .glass{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:30px;backdrop-filter:blur(14px);position:relative;overflow:hidden}
+  .product-head{display:flex;gap:18px;align-items:center}
+  .product-img{width:96px;height:96px;border-radius:20px;background:#fff;display:grid;place-items:center;overflow:hidden;flex:none;box-shadow:0 14px 30px -10px rgba(0,0,0,.6)}
+  .product-img img{width:100%;height:100%;object-fit:contain;padding:6px}
+  .product-name{font-size:1.3rem;font-weight:800;line-height:1.2}
+  .product-brand{color:var(--muted);font-size:.95rem;margin-top:4px}
+  .badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:22px}
+  .badge{padding:7px 12px;border-radius:12px;font-size:.85rem;font-weight:700;background:var(--card-strong);border:1px solid var(--border)}
+  .ns{width:26px;height:26px;border-radius:7px;display:inline-grid;place-items:center;color:#fff;font-weight:900;margin-right:6px;font-size:.85rem}
+  .vial-area{display:flex;align-items:center;gap:20px;margin-top:22px}
+  .vial-svg{width:230px;height:auto;flex:none;overflow:visible}
+  .verdict{flex:1}
+  .verdict .big{font-size:3.6rem;font-weight:900;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums}
+  .verdict .big small{font-size:1.1rem;color:var(--muted);font-weight:700;margin-left:4px}
+  .verdict .label{display:inline-block;margin-top:14px;padding:8px 14px;border-radius:999px;font-weight:800;font-size:.95rem}
+  .verdict p{color:var(--muted);font-size:.92rem;margin-top:14px}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:18px;font-size:.8rem;color:var(--muted)}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+
+  .hz-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+  .hz-head h3{font-size:1.2rem}
+  .hz-count{font-size:.85rem;color:var(--muted)}
+  .hz-list{margin-top:18px;display:flex;flex-direction:column;gap:10px;max-height:470px;overflow:auto;padding-right:6px}
+  .hz-list::-webkit-scrollbar{width:6px}
+  .hz-list::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:9px}
+  .hz{display:grid;grid-template-columns:40px 1fr;gap:14px;padding:14px;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid var(--border);border-left:3px solid var(--sev);
+    animation:slideIn .5s both;animation-delay:var(--d)}
+  @keyframes slideIn{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:none}}
+  .hz-ic{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:color-mix(in srgb,var(--sev) 18%,transparent);color:var(--sev);font-weight:900}
+  .hz-ic svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round}
+  .hz-top{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+  .hz-name{font-weight:750;font-size:.98rem}
+  .hz-code{font-size:.75rem;color:var(--muted);margin-left:6px;font-weight:500}
+  .pill{font-size:.72rem;font-weight:800;padding:4px 9px;border-radius:999px;background:color-mix(in srgb,var(--sev) 20%,transparent);color:var(--sev);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
+  .hz p{font-size:.87rem;color:var(--muted);margin-top:5px;line-height:1.45}
+  .sev-high{--sev:#ef4444}.sev-medium{--sev:#f59e0b}.sev-low{--sev:#60a5fa}
+  .empty{text-align:center;padding:40px 10px;color:var(--muted)}
+  .empty .big-ok{width:72px;height:72px;margin:0 auto 14px;border-radius:50%;display:grid;place-items:center;background:rgba(34,197,94,.15);color:#4ade80;animation:pulseRing 2s infinite}
+  .empty .big-ok svg{width:36px;height:36px;stroke:currentColor;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+  @keyframes pulseRing{0%{box-shadow:0 0 0 0 rgba(34,197,94,.5)}100%{box-shadow:0 0 0 22px rgba(34,197,94,0)}}
+
+  .loader{display:none;margin-top:30px;align-items:center;gap:14px;color:var(--muted)}
+  .loader.show{display:flex}
+  .spinner{width:26px;height:26px;border-radius:50%;border:3px solid rgba(255,255,255,.12);border-top-color:var(--mint);animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,140%);background:rgba(15,30,25,.95);border:1px solid var(--border);padding:14px 20px;border-radius:16px;z-index:200;box-shadow:var(--shadow);transition:transform .5s cubic-bezier(.2,.9,.3,1.2);max-width:90vw}
+  .toast.show{transform:translate(-50%,0)}
+
+  /* ---------- HOW ---------- */
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:48px}
+  .step{padding:30px;border-radius:var(--radius);border:1px solid var(--border);background:var(--card);position:relative}
+  .step .n{font-size:3.4rem;font-weight:900;background:linear-gradient(180deg,#6ee7b7,transparent);-webkit-background-clip:text;background-clip:text;color:transparent;line-height:1}
+  .step h3{margin-top:16px;font-size:1.15rem}
+  .step p{color:var(--muted);margin-top:8px;font-size:.95rem}
+
+  /* ---------- BANNER CTA ---------- */
+  .banner{
+    border-radius:32px;padding:56px;position:relative;overflow:hidden;
+    background:linear-gradient(120deg,#064e3b 0%,#065f46 40%,#0f766e 100%);
+    border:1px solid rgba(255,255,255,.12);display:flex;justify-content:space-between;align-items:center;gap:30px;flex-wrap:wrap;
+  }
+  .banner::before{content:"";position:absolute;inset:0;background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80'><circle cx='10' cy='10' r='2' fill='white' opacity='.12'/><circle cx='50' cy='40' r='1.5' fill='white' opacity='.12'/></svg>")}
+  .banner .shape{position:absolute;right:-60px;bottom:-80px;width:360px;height:360px;border-radius:50%;background:radial-gradient(circle,rgba(253,230,138,.35),transparent 70%);animation:float 8s ease-in-out infinite}
+  .banner h2{margin:0 0 8px;position:relative}
+  .banner p{color:#d1fae5;position:relative;max-width:50ch}
+
+  footer{padding:50px 0;border-top:1px solid var(--border);color:var(--muted);font-size:.9rem}
+  footer .row{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;align-items:center}
+
+  /* ---------- MODAL ---------- */
+  .modal{position:fixed;inset:0;z-index:150;display:none;align-items:center;justify-content:center;background:rgba(2,8,6,.7);backdrop-filter:blur(10px);padding:20px}
+  .modal.show{display:flex;animation:fadeIn .3s both}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  .modal-card{width:min(640px,100%);border-radius:30px;background:#081611;border:1px solid var(--border);padding:26px;box-shadow:var(--shadow);animation:popIn .45s cubic-bezier(.2,.9,.3,1.3) both}
+  @keyframes popIn{from{transform:scale(.9) translateY(20px);opacity:0}to{transform:none;opacity:1}}
+  .modal-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+  .modal-top h3{font-size:1.15rem}
+  .x{width:40px;height:40px;border-radius:50%;border:1px solid var(--border);background:var(--card);color:var(--text);cursor:pointer;font-size:1.2rem;transition:.2s}
+  .x:hover{background:var(--card-strong);transform:rotate(90deg)}
+  .cam{position:relative;border-radius:22px;overflow:hidden;background:#000;aspect-ratio:4/3;display:grid;place-items:center}
+  .cam video{width:100%;height:100%;object-fit:cover}
+  .cam .frame{position:absolute;inset:14%;border:2px solid rgba(52,211,153,.8);border-radius:18px;box-shadow:0 0 0 999px rgba(0,0,0,.35)}
+  .cam .frame::before,.cam .frame::after{content:"";position:absolute;width:26px;height:26px;border-color:#6ee7b7;border-style:solid;border-width:0}
+  .cam .frame::before{top:-4px;left:-4px;border-top-width:5px;border-left-width:5px;border-radius:10px 0 0 0}
+  .cam .frame::after{bottom:-4px;right:-4px;border-bottom-width:5px;border-right-width:5px;border-radius:0 0 10px 0}
+  .cam .line{position:absolute;left:14%;right:14%;height:2px;background:linear-gradient(90deg,transparent,#34d399,transparent);box-shadow:0 0 12px #34d399;animation:scanY 2s ease-in-out infinite}
+  @keyframes scanY{0%,100%{top:20%}50%{top:78%}}
+  .cam .msg{position:absolute;inset:auto 0 16px;text-align:center;color:#d1fae5;font-size:.92rem;padding:0 16px}
+  .modal .field{margin-top:16px}
+
+  /* ---------- RESPONSIVE ---------- */
+  @media (max-width:960px){
+    .hero-grid,.scanner-box,.result-grid{grid-template-columns:1fr}
+    .hero-art{height:380px}
+    .cats{grid-template-columns:repeat(2,1fr)}
+    .steps{grid-template-columns:1fr}
+    nav ul{display:none}
+    .vial-svg{width:190px}
+  }
+  @media (max-width:560px){
+    .cats{grid-template-columns:1fr}
+    .vial-area{flex-direction:column}
+    .banner{padding:34px}
+    .scanner-box{padding:24px}
+  }
+
+  @keyframes fadeUp{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:none}}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+  /* ---------- VIAL ANIMATIONS ---------- */
+  .wave{animation:wave 2.8s linear infinite}
+  .wave.b{animation-duration:4.2s;animation-direction:reverse;opacity:.55}
+  @keyframes wave{to{transform:translateX(-110px)}}
+  .bub{animation:rise 3.6s ease-in infinite;opacity:0}
+  @keyframes rise{0%{transform:translateY(0);opacity:0}15%{opacity:.85}85%{opacity:.5}100%{transform:translateY(-290px);opacity:0}}
+  .glint{animation:glint 4s ease-in-out infinite}
+  @keyframes glint{0%,100%{opacity:.5}50%{opacity:.9}}
+  .vial-idle{animation:bob 4s ease-in-out infinite;transform-origin:center}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+  .needle-txt{font-weight:900;font-size:22px;fill:#fff}
+  .tick-lbl{fill:#8fa99e;font-size:11px;font-weight:600}
+  .tick-lbl.major{fill:#e8f7f1}
+  .fill-glow{filter:url(#glow)}
+
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition:none!important}
+    .reveal{opacity:1;transform:none}
+  }
+</style>
+</head>
+<body>
+<div class="grain"></div>
+
+<!-- SVG SYMBOLS -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="logoG" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6ee7b7"/><stop offset="1" stop-color="#047857"/>
+    </linearGradient>
+    <linearGradient id="logoLeaf" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#fde68a"/><stop offset="1" stop-color="#34d399"/>
+    </linearGradient>
+    <symbol id="logo" viewBox="0 0 64 64">
+      <circle cx="32" cy="32" r="30" fill="url(#logoG)"/>
+      <circle cx="32" cy="32" r="30" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="1.5"/>
+      <!-- fiole -->
+      <path d="M26 12h12v6h-1v8c6 3.5 9 8 9 13 0 6.6-5.4 11-12 11s-12-4.4-12-11c0-5 3-9.5 9-13v-8h-1z" fill="#ffffff" opacity=".95"/>
+      <path d="M22.5 37c0-4 3-7.2 9.5-7.2S41.5 33 41.5 37c0 4.9-4 7.5-9.5 7.5S22.5 41.9 22.5 37z" fill="#10b981"/>
+      <!-- feuille -->
+      <path d="M44 14c6 0 9 3.5 9 9-6 0-9-3.5-9-9z" fill="url(#logoLeaf)"/>
+      <circle cx="29" cy="34" r="1.6" fill="#fff" opacity=".8"/>
+      <circle cx="35" cy="31" r="1.1" fill="#fff" opacity=".7"/>
+    </symbol>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+</svg>
+
+<!-- HEADER -->
+<header>
+  <div class="wrap nav">
+    <a href="#top" class="brand">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><use href="#logo"/></svg>
+      <span>Panier <em>Pur</em></span>
+    </a>
+    <nav>
+      <ul>
+        <li><a href="#categories">Catégories</a></li>
+        <li><a href="#scanner">Scanner</a></li>
+        <li><a href="#comment">Comment ça marche</a></li>
+      </ul>
+    </nav>
+    <button class="btn" onclick="openScanner()" style="padding:11px 18px">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2M7 8v8M10 8v8M13 8v8M16 8v8"/></svg>
+      Scanner
+    </button>
+  </div>
+</header>
+
+<main id="top">
+
+<!-- HERO -->
+<section class="hero" style="padding-top:70px;padding-bottom:30px">
+  <div class="blob" style="width:380px;height:380px;background:#10b981;left:-120px;top:40px"></div>
+  <div class="blob" style="width:300px;height:300px;background:#ef4444;opacity:.25;right:-80px;top:120px;animation-delay:-3s"></div>
+  <div class="wrap hero-grid">
+    <div>
+      <span class="eyebrow"><i></i> Analyse instantanée des produits du quotidien</span>
+      <h1>Scannez.<br/>Comprenez.<br/><span class="grad">Choisissez pur.</span></h1>
+      <p class="lead">Panier Pur décrypte la composition de vos produits alimentaires, cosmétiques, soins et d'entretien. Additifs, substances controversées, perturbateurs endocriniens : tout est signalé en un coup d'œil.</p>
+      <div class="hero-cta">
+        <button class="btn" onclick="openScanner()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2M7 8v8M10 8v8M13 8v8M16 8v8"/></svg>
+          Scanner un produit
+        </button>
+        <a class="btn ghost" href="#categories">Explorer les catégories</a>
+      </div>
+      <div class="hero-stats">
+        <div><b>3</b><span>bases de données</span></div>
+        <div><b>60+</b><span>substances analysées</span></div>
+        <div><b>100%</b><span>gratuit & sans compte</span></div>
+      </div>
+    </div>
+
+    <div class="hero-art" aria-hidden="true">
+      <svg class="main" viewBox="0 0 500 520">
+        <defs>
+          <radialGradient id="hb" cx="50%" cy="40%" r="60%">
+            <stop offset="0" stop-color="#1f4d3f"/><stop offset="1" stop-color="#06120e"/>
+          </radialGradient>
+          <linearGradient id="hl" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#fca5a5"/><stop offset=".5" stop-color="#f59e0b"/><stop offset="1" stop-color="#34d399"/>
+          </linearGradient>
+          <linearGradient id="gl" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#ffffff" stop-opacity=".5"/><stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <circle cx="250" cy="260" r="210" fill="url(#hb)" stroke="rgba(255,255,255,.08)"/>
+        <circle cx="250" cy="260" r="170" fill="none" stroke="rgba(52,211,153,.25)" stroke-dasharray="4 10"/>
+        <!-- grosse fiole décorative -->
+        <g class="float">
+          <path d="M200 110h100v40h-4v70c60 35 90 80 90 128 0 66-54 108-140 108S110 444 110 378c0-48 30-93 90-128v-70h-4z" fill="rgba(255,255,255,.06)" stroke="rgba(255,255,255,.35)" stroke-width="3"/>
+          <path d="M129 350c0-30 26-58 121-58s121 28 121 58c0 52-32 80-121 80S129 402 129 350z" fill="url(#hl)" opacity=".9"/>
+          <path d="M129 340c40 16 90-16 121 0s80 16 121 0" fill="none" stroke="#fff" stroke-width="3" opacity=".7"/>
+          <path d="M150 170c0 30 0 60-10 90" stroke="url(#gl)" stroke-width="16" stroke-linecap="round" fill="none"/>
+        </g>
+        <!-- feuilles -->
+        <g class="float d2">
+          <path d="M395 110c40 0 60 30 60 62-40 0-60-30-60-62z" fill="#34d399" opacity=".9"/>
+          <path d="M395 110c-10 30-30 50-52 56" stroke="#a7f3d0" stroke-width="3" fill="none" opacity=".6"/>
+        </g>
+        <g class="float d3">
+          <path d="M70 180c-30 10-46 40-40 70 28-6 44-34 40-70z" fill="#10b981" opacity=".85"/>
+        </g>
+        <!-- pastilles -->
+        <g class="float d2">
+          <circle cx="410" cy="330" r="30" fill="#fde68a" opacity=".85"/>
+          <text x="410" y="337" text-anchor="middle" font-family="Inter,sans-serif" font-weight="900" font-size="16" fill="#7c2d12">E150d</text>
+        </g>
+        <g class="float d3">
+          <rect x="40" y="380" width="112" height="46" rx="23" fill="#7f1d1d" opacity=".9"/>
+          <text x="96" y="409" text-anchor="middle" font-family="Inter,sans-serif" font-weight="800" font-size="16" fill="#fecaca">Risque 78</text>
+        </g>
+        <g class="float">
+          <rect x="330" y="420" width="130" height="46" rx="23" fill="#064e3b" stroke="#34d399" stroke-width="1.5"/>
+          <text x="395" y="449" text-anchor="middle" font-family="Inter,sans-serif" font-weight="800" font-size="16" fill="#a7f3d0">✓ Pur · 12</text>
+        </g>
+      </svg>
+    </div>
+  </div>
+
+  <div class="marquee" style="margin-top:50px">
+    <div class="marquee-track">
+      <span>Additifs</span><span>Colorants</span><span>Perturbateurs endocriniens</span><span>Parabènes</span><span>Nitrites</span><span>Conservateurs</span><span>Microplastiques</span><span>Nutri-Score</span><span>NOVA</span>
+      <span>Additifs</span><span>Colorants</span><span>Perturbateurs endocriniens</span><span>Parabènes</span><span>Nitrites</span><span>Conservateurs</span><span>Microplastiques</span><span>Nutri-Score</span><span>NOVA</span>
+    </div>
+  </div>
+</section>
+
+<!-- CATEGORIES -->
+<section id="categories">
+  <div class="wrap">
+    <div class="reveal">
+      <div class="kicker">Catégories</div>
+      <h2>Tout ce qui entre dans votre panier</h2>
+      <p class="sub">Choisissez une famille de produits : chaque catégorie interroge la base de données adaptée (alimentaire, cosmétique ou entretien).</p>
+    </div>
+    <div class="cats" id="catGrid"></div>
+  </div>
+</section>
+
+<!-- SCANNER -->
+<section id="scanner" style="padding-top:40px">
+  <div class="wrap reveal">
+    <div class="scanner-box">
+      <div>
+        <div class="kicker">Scanner</div>
+        <h2 style="font-size:clamp(1.8rem,3.4vw,2.5rem)">Un code-barre, une réponse.</h2>
+        <p class="sub">Scannez avec votre caméra (EAN-13, EAN-8, UPC) ou saisissez le numéro inscrit sous le code-barre. Le produit est reconnu puis analysé instantanément.</p>
+        <div class="chips" id="scanChips"></div>
+        <div class="field">
+          <input id="manualCode" inputmode="numeric" placeholder="Ex. 3017620422003" maxlength="18" />
+          <button class="btn" onclick="analyzeManual()">Analyser</button>
+        </div>
+        <div class="examples">
+          <span>Essayer :</span>
+          <button class="chip" onclick="scanCode('3017620422003', 'food')">Pâte à tartiner</button>
+          <button class="chip" onclick="scanCode('5449000000996', 'drinks')">Soda cola</button>
+          <button class="chip" onclick="openScanner()">📷 Caméra</button>
+        </div>
+        <p class="hint" id="camStatus"></p>
+      </div>
+      <div>
+        <div class="barcode-art">
+          <svg viewBox="0 0 300 150" aria-hidden="true">
+            <g id="bars"></g>
+          </svg>
+          <div class="laser"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- RESULTS -->
+<section id="resultSection">
+  <div class="wrap">
+    <div class="loader" id="loader"><div class="spinner"></div><span>Recherche du produit dans la base…</span></div>
+    <div class="result-grid" id="resultGrid" style="display:none">
+
+      <!-- Colonne fiole -->
+      <div class="glass reveal in" id="vialCard">
+        <div class="product-head">
+          <div class="product-img" id="pImg"></div>
+          <div>
+            <div class="product-name" id="pName">—</div>
+            <div class="product-brand" id="pBrand">—</div>
+            <div class="product-brand" id="pCode" style="font-size:.8rem;opacity:.7"></div>
+          </div>
+        </div>
+        <div class="badges" id="pBadges"></div>
+
+        <div class="vial-area">
+          <svg class="vial-svg" viewBox="0 0 240 440" id="vial" aria-label="Fiole de niveau de risque">
+            <defs>
+              <clipPath id="vialClip">
+                <path d="M78 98 H142 V110 Q176 120 176 160 V380 Q176 412 144 412 H76 Q44 412 44 380 V160 Q44 120 78 110 Z"/>
+              </clipPath>
+              <linearGradient id="liqGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop id="s1" offset="0" stop-color="#22c55e"/>
+                <stop id="s2" offset=".55" stop-color="#16a34a"/>
+                <stop id="s3" offset="1" stop-color="#14532d"/>
+              </linearGradient>
+              <linearGradient id="glassG" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0" stop-color="#fff" stop-opacity=".02"/>
+                <stop offset=".3" stop-color="#fff" stop-opacity=".22"/>
+                <stop offset=".5" stop-color="#fff" stop-opacity=".05"/>
+                <stop offset=".85" stop-color="#fff" stop-opacity=".16"/>
+                <stop offset="1" stop-color="#fff" stop-opacity=".02"/>
+              </linearGradient>
+              <linearGradient id="capG" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0" stop-color="#1e293b"/><stop offset=".5" stop-color="#475569"/><stop offset="1" stop-color="#1e293b"/>
+              </linearGradient>
+            </defs>
+
+            <!-- bouchon -->
+            <g class="vial-idle">
+              <rect x="72" y="22" width="76" height="30" rx="8" fill="url(#capG)"/>
+              <rect x="66" y="50" width="88" height="14" rx="5" fill="url(#capG)"/>
+
+              <!-- fond du verre -->
+              <path d="M78 98 H142 V110 Q176 120 176 160 V380 Q176 412 144 412 H76 Q44 412 44 380 V160 Q44 120 78 110 Z" fill="rgba(255,255,255,.04)"/>
+
+              <!-- liquide -->
+              <g clip-path="url(#vialClip)">
+                <g id="liquid" transform="translate(0 400)" class="fill-glow">
+                  <g class="wave">
+                    <path d="M-220 0 q27.5 -12 55 0 t55 0 t55 0 t55 0 t55 0 t55 0 t55 0 t55 0 V460 H-220 Z" fill="url(#liqGrad)"/>
+                  </g>
+                  <g class="wave b">
+                    <path d="M-220 6 q27.5 10 55 0 t55 0 t55 0 t55 0 t55 0 t55 0 t55 0 t55 0 V460 H-220 Z" fill="#fff" opacity=".12"/>
+                  </g>
+                  <g id="bubbles"></g>
+                </g>
+              </g>
+
+              <!-- contour du verre -->
+              <path d="M78 98 H142 V110 Q176 120 176 160 V380 Q176 412 144 412 H76 Q44 412 44 380 V160 Q44 120 78 110 Z" fill="url(#glassG)" stroke="rgba(255,255,255,.45)" stroke-width="2.5"/>
+              <!-- reflets -->
+              <path class="glint" d="M60 170 V360" stroke="#fff" stroke-width="5" stroke-linecap="round" opacity=".5"/>
+              <path d="M158 170 V240" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".35"/>
+            </g>
+
+            <!-- graduations gauche -->
+            <g id="ticks"></g>
+
+            <!-- zones (bande droite) -->
+            <rect x="222" y="315" width="6" height="85" rx="3" fill="#22c55e" opacity=".85"/>
+            <rect x="222" y="233" width="6" height="82" rx="3" fill="#f59e0b" opacity=".85"/>
+            <rect x="222" y="118" width="6" height="115" rx="3" fill="#ef4444" opacity=".85"/>
+
+            <!-- aiguille / curseur -->
+            <g id="needle" transform="translate(0 400)">
+              <polygon points="180,0 190,-7 190,7" fill="#fff"/>
+              <text x="198" y="8" class="needle-txt" id="needleTxt">0</text>
+            </g>
+          </svg>
+
+          <div class="verdict">
+            <div class="big" id="scoreBig">0<small>/100</small></div>
+            <span class="label" id="verdictLabel">—</span>
+            <p id="verdictText">—</p>
+            <div class="legend">
+              <span><i style="background:#22c55e"></i>0–30 Pur</span>
+              <span><i style="background:#f59e0b"></i>30–60 Modéré</span>
+              <span><i style="background:#ef4444"></i>60–100 À éviter</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Colonne composants dangereux -->
+      <div class="glass reveal in" id="hazCard">
+        <div class="hz-head">
+          <h3>Composants à surveiller</h3>
+          <span class="hz-count" id="hzCount"></span>
+        </div>
+        <div class="hz-list" id="hzList"></div>
+        <p class="hint" style="margin-top:16px">Les seuils et effets décrits sont indicatifs et reposent sur les avis publics (EFSA, CIRC, réglementations). En cas de doute, consultez un professionnel de santé.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- COMMENT -->
+<section id="comment">
+  <div class="wrap">
+    <div class="reveal">
+      <div class="kicker">Comment ça marche</div>
+      <h2>De l'étiquette au verdict en trois gestes</h2>
+    </div>
+    <div class="steps">
+      <div class="step reveal"><div class="n">01</div><h3>Scannez</h3><p>Pointez la caméra vers le code-barre ou saisissez le numéro. Panier Pur reconnaît le produit dans sa base dédiée.</p></div>
+      <div class="step reveal" style="transition-delay:.12s"><div class="n">02</div><h3>Analysez</h3><p>Chaque additif, ingrédient et indice nutritionnel est comparé à une liste de substances étudiées par les autorités sanitaires.</p></div>
+      <div class="step reveal" style="transition-delay:.24s"><div class="n">03</div><h3>Choisissez</h3><p>La fiole se remplit selon le niveau de risque : vert pour un produit sain, rouge pour un produit à éviter.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- BANNER -->
+<section style="padding-top:20px">
+  <div class="wrap reveal">
+    <div class="banner">
+      <div class="shape"></div>
+      <div>
+        <h2>Votre panier, plus pur à chaque course.</h2>
+        <p>Scannez, comparez, remplacez. Une habitude simple pour réduire les substances indésirables au quotidien.</p>
+      </div>
+      <button class="btn" onclick="openScanner()" style="position:relative">Commencer le scan</button>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap row">
+    <div style="display:flex;align-items:center;gap:10px">
+      <svg width="28" height="28" viewBox="0 0 64 64"><use href="#logo"/></svg>
+      <span>© <span id="year"></span> Panier Pur — Données : Open Food Facts, Open Beauty Facts, Open Products Facts.</span>
+    </div>
+    <span>Outil d'information, ne remplace pas un avis médical.</span>
+  </div>
+</footer>
+
+<!-- MODAL SCANNER -->
+<div class="modal" id="modal" onclick="if(event.target===this)closeScanner()">
+  <div class="modal-card">
+    <div class="modal-top">
+      <h3>Scanner un code-barre</h3>
+      <button class="x" onclick="closeScanner()" aria-label="Fermer">✕</button>
+    </div>
+    <div class="chips" id="modalChips" style="margin-top:0;margin-bottom:14px"></div>
+    <div class="cam" id="camBox">
+      <video id="video" playsinline muted></video>
+      <div class="frame"></div>
+      <div class="line"></div>
+      <div class="msg" id="camMsg">Initialisation de la caméra…</div>
+    </div>
+    <div class="field">
+      <input id="modalCode" inputmode="numeric" placeholder="…ou saisissez le code manuellement" maxlength="18" />
+      <button class="btn" onclick="analyzeModal()">Valider</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CONSENTEMENT CAMÉRA -->
+<div class="modal" id="consentModal" style="z-index:160" onclick="if(event.target===this)refuseCamera()">
+  <div class="modal-card" style="width:min(480px,100%);text-align:center">
+    <div style="width:76px;height:76px;margin:4px auto 18px;border-radius:24px;display:grid;place-items:center;background:linear-gradient(135deg,#6ee7b7,#10b981);box-shadow:0 16px 40px -10px rgba(52,211,153,.6)">
+      <svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="#03130d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 0 1 2-2h2.5l1.5-2h6l1.5 2H19a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="12.5" r="3.5"/></svg>
+    </div>
+    <h3 style="font-size:1.35rem;font-weight:800;letter-spacing:-.02em">Autoriser l’accès à la caméra ?</h3>
+    <p class="sub" style="margin:12px auto 0;font-size:.95rem">Panier Pur utilise l’appareil photo <b style="color:var(--text)">uniquement</b> pour lire le code-barre des produits.</p>
+    <ul style="list-style:none;margin:20px 0 26px;text-align:left;display:grid;gap:10px;font-size:.9rem;color:var(--muted)">
+      <li>✓ &nbsp;Aucune image n’est enregistrée ni envoyée sur un serveur.</li>
+      <li>✓ &nbsp;La lecture se fait directement dans votre navigateur.</li>
+      <li>✓ &nbsp;Vous pouvez retirer cette autorisation à tout moment.</li>
+    </ul>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
+      <button class="btn" onclick="acceptCamera()">Autoriser la caméra</button>
+      <button class="btn ghost" onclick="refuseCamera()">Non, je saisirai le code</button>
+    </div>
+    <p class="hint" style="margin-top:16px">Votre navigateur vous demandera aussi sa propre confirmation.</p>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================
+   1. CATÉGORIES & BASES DE DONNÉES
+   ========================================================= */
+const DB = {
+  off:  'https://world.openfoodfacts.org/api/v2/product/',
+  obf:  'https://world.openbeautyfacts.org/api/v2/product/',
+  opf:  'https://world.openproductsfacts.org/api/v2/product/'
+};
+
+const CATEGORIES = [
+  { id:'food',   name:'Alimentation', desc:'Épicerie, plats, snacks, sucreries', db:['off','obf','opf'], tint:'linear-gradient(135deg,#f97316,#ef4444)', glow:'rgba(249,115,22,.35)',
+    icon:'<path d="M12 8c-3.3 0-6 2.2-6 6.2C6 18.5 8.3 22 10.4 22c1 0 1.4-.5 1.6-.5s.6.5 1.6.5c2.1 0 4.4-3.5 4.4-7.8C18 10.2 15.3 8 12 8z"/><path d="M12 8c0-2.4 1.2-4.5 3.5-5.5"/><path d="M15 3.5c1.2-.6 2.8-.4 3.5.5-1.2.6-2.8.4-3.5-.5z"/>' },
+  { id:'drinks', name:'Boissons',     desc:'Sodas, jus, eaux aromatisées, bières', db:['off','obf','opf'], tint:'linear-gradient(135deg,#06b6d4,#3b82f6)', glow:'rgba(6,182,212,.35)',
+    icon:'<path d="M5 8h11v5a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5z"/><path d="M16 10h1.5a2.5 2.5 0 0 1 0 5H16"/><path d="M8 2.5c0 1.5 1 1.5 1 3M11.5 2.5c0 1.5 1 1.5 1 3"/>' },
+  { id:'makeup', name:'Maquillage',   desc:'Rouges à lèvres, fonds de teint, mascaras', db:['obf','off','opf'], tint:'linear-gradient(135deg,#ec4899,#a855f7)', glow:'rgba(236,72,153,.35)',
+    icon:'<rect x="8" y="11" width="8" height="10" rx="1.5"/><path d="M9 11V6.5l3-4.5 3 4.5V11"/><path d="M9 15.5h6"/>' },
+  { id:'care',   name:'Soins',        desc:'Crèmes, sérums, soins du visage et du corps', db:['obf','off','opf'], tint:'linear-gradient(135deg,#34d399,#0d9488)', glow:'rgba(52,211,153,.35)',
+    icon:'<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/><path d="M9.5 15a2.6 2.6 0 0 0 2.5 2.5"/>' },
+  { id:'hygiene',name:'Hygiène',      desc:'Shampoings, savons, dentifrices, déodorants', db:['obf','off','opf'], tint:'linear-gradient(135deg,#60a5fa,#6366f1)', glow:'rgba(96,165,250,.35)',
+    icon:'<circle cx="8" cy="10" r="3.2"/><circle cx="15.5" cy="7.5" r="2.2"/><circle cx="14.5" cy="16" r="4"/>' },
+  { id:'home',   name:'Entretien',    desc:'Produits ménagers, lessives, nettoyants', db:['opf','obf','off'], tint:'linear-gradient(135deg,#facc15,#f59e0b)', glow:'rgba(250,204,21,.3)',
+    icon:'<path d="M9 9h6v12H9z"/><path d="M10.5 9V6h3v3"/><path d="M11.5 6V3h3"/><path d="M15 4.5h3"/><path d="M17.5 7.5v.01M19 11h.01"/>' }
+];
+
+const CATEGORY_TIPS = {
+  food:'Base Open Food Facts', drinks:'Base Open Food Facts', makeup:'Base Open Beauty Facts',
+  care:'Base Open Beauty Facts', hygiene:'Base Open Beauty Facts', home:'Base Open Products Facts'
+};
+
+/* =========================================================
+   2. RÈGLES D'ANALYSE (additifs, ingrédients, scores)
+   ========================================================= */
+// Additifs alimentaires (codes E)
+const ADDITIVES = {
+  E102:{n:'Tartrazine (jaune)', s:'high', d:'Colorant suspecté de favoriser l’hyperactivité chez l’enfant ; réactions allergiques possibles.'},
+  E104:{n:'Jaune de quinoléine', s:'high', d:'Lié à l’hyperactivité chez l’enfant ; allergies, colorant controversé.'},
+  E110:{n:'Jaune orangé S', s:'medium', d:'Possibles réactions allergiques et troubles de l’attention chez certains enfants.'},
+  E120:{n:'Carmin (cochenille)', s:'low', d:'Colorant d’origine animale ; allergies rares mais parfois sévères.'},
+  E122:{n:'Azorubine', s:'medium', d:'Hyperactivité suspectée chez l’enfant ; allergies possibles.'},
+  E123:{n:'Amarante', s:'high', d:'Interdit aux États-Unis ; cancérogénicité suspectée chez l’animal.'},
+  E124:{n:'Ponceau 4R', s:'high', d:'Lié à l’hyperactivité chez l’enfant ; urticaire et réactions allergiques.'},
+  E127:{n:'Érythrosine', s:'high', d:'Effets sur la thyroïde observés chez l’animal ; suspicion de cancérogénicité.'},
+  E129:{n:'Rouge allura AC', s:'medium', d:'Hyperactivité chez certains enfants ; allergies possibles.'},
+  E150D:{n:'Caramel ammoniacal', s:'high', d:'Peut contenir du 4-MEI, composé suspecté d’être cancérigène.'},
+  E171:{n:'Dioxyde de titane', s:'high', d:'Nanoparticules suspectées de génotoxicité ; interdit comme additif dans l’UE depuis 2022.'},
+  E173:{n:'Aluminium', s:'medium', d:'Accumulation possible dans l’organisme ; neurotoxicité suspectée à forte dose.'},
+  E211:{n:'Benzoate de sodium', s:'medium', d:'Allergies et intolérances ; peut former du benzène en présence de vitamine C.'},
+  E220:{n:'Anhydride sulfureux (sulfites)', s:'medium', d:'Crises d’asthme et réactions chez les personnes sensibles.'},
+  E250:{n:'Nitrite de sodium', s:'high', d:'Peut former des nitrosamines, composés cancérigènes, surtout dans les charcuteries.'},
+  E251:{n:'Nitrate de sodium', s:'high', d:'Transformé en nitrites dans l’organisme ; lié au cancer colorectal à forte consommation.'},
+  E320:{n:'BHA (butylhydroxyanisole)', s:'high', d:'Antioxydant « peut-être cancérigène » (CIRC 2B) ; perturbateur endocrinien suspecté.'},
+  E321:{n:'BHT (butylhydroxytoluène)', s:'medium', d:'Antioxydant controversé ; effets hépatiques et hormonaux suspectés.'},
+  E338:{n:'Acide phosphorique', s:'medium', d:'Favorise l’érosion dentaire ; excès de phosphates lié aux soucis osseux et rénaux.'},
+  E407:{n:'Carraghénanes', s:'medium', d:'Possible inflammation intestinale chez les personnes sensibles (études animales).'},
+  E433:{n:'Polysorbate 80', s:'medium', d:'Émulsifiant suspecté d’altérer le microbiote et la barrière intestinale.'},
+  E450:{n:'Diphosphates', s:'medium', d:'Excès de phosphates : risques cardiovasculaires et rénaux, surtout avec les produits ultra-transformés.'},
+  E466:{n:'Carboxyméthylcellulose', s:'medium', d:'Peut perturber le microbiote intestinal (études animales et humaines).'},
+  E621:{n:'Glutamate monosodique', s:'low', d:'Maux de tête ou palpitations signalés chez certaines personnes sensibles.'},
+  E950:{n:'Acésulfame K', s:'low', d:'Édulcorant intense ; effets à long terme encore débattus.'},
+  E951:{n:'Aspartame', s:'medium', d:'Classé « peut-être cancérigène » (CIRC 2B, 2023) ; respecter la dose journalière admissible.'},
+  E955:{n:'Sucralose', s:'low', d:'Édulcorant ; impact possible sur le microbiote selon certaines études.'}
+};
+
+// Ingrédients cosmétiques & ménagers (recherche par mots-clés)
+const INGREDIENTS = [
+  {re:/methylisothiazolinone|methylchloroisothiazolinone|\bmit\b|\bmci\b/, n:'Méthylisothiazolinone (MIT/MCI)', s:'high', d:'Conservateur très allergisant : dermatites de contact et eczémas.'},
+  {re:/formaldehyde|dmdm hydantoin|imidazolidinyl urea|diazolidinyl urea|quaternium-15|bronopol/, n:'Libérateur de formaldéhyde', s:'high', d:'Libère du formaldéhyde (cancérigène avéré par inhalation) ; allergies cutanées.'},
+  {re:/triclosan/, n:'Triclosan', s:'high', d:'Perturbateur endocrinien ; interdit dans les cosmétiques de l’UE depuis 2016.'},
+  {re:/hydroquinone/, n:'Hydroquinone', s:'high', d:'Éclaircissant interdit dans les cosmétiques de l’UE ; risques de dépigmentation et cancer suspectés.'},
+  {re:/p-phenylenediamine|phenylenediamine|lead acetate|coal tar|\bplomb\b/, n:'Phénylènediamine / plomb / goudron', s:'high', d:'Allergène puissant, toxique pour le système nerveux ou cancérigène selon la substance.'},
+  {re:/benzophenone-?3|oxybenzone|benzophenone-?4/, n:'Oxybenzone (benzophénones)', s:'high', d:'Filtre UV perturbateur endocrinien ; passage cutané démontré.'},
+  {re:/methylparaben|propylparaben|butylparaben|ethylparaben|isobutylparaben/, n:'Parabènes', s:'medium', d:'Perturbateurs endocriniens suspectés ; allergies possibles.'},
+  {re:/ethylhexyl methoxycinnamate|octinoxate/, n:'Octinoxate', s:'medium', d:'Filtre UV soupçonné de perturber les hormones.'},
+  {re:/cyclopentasiloxane|cyclotetrasiloxane|\bd4\b|\bd5\b/, n:'Siloxanes cycliques (D4/D5)', s:'medium', d:'Perturbateurs endocriniens suspectés ; très persistants dans l’environnement.'},
+  {re:/\btalc\b/, n:'Talc', s:'medium', d:'Suspicion de cancérogénicité lorsqu’il est inhalé ; risque de contamination à l’amiante.'},
+  {re:/polyethylene|polypropylene|acrylates copolymer|polymethyl|nylon-12/, n:'Microplastiques', s:'medium', d:'Particules persistantes qui s’accumulent dans l’eau et les organismes.'},
+  {re:/diethanolamine|triethanolamine|monoethanolamine|\bdea\b|\btea\b|\bmea\b/, n:'Éthanolamines (DEA/TEA/MEA)', s:'medium', d:'Peuvent former des nitrosamines cancérigènes en présence de nitrites.'},
+  {re:/sodium lauryl sulfate|sodium laureth sulfate|\bsls\b|\bsles\b/, n:'Sulfates (SLS/SLES)', s:'low', d:'Détergents irritants pour la peau et les yeux, surtout sur peaux sensibles.'},
+  {re:/\bparfum\b|\bfragrance\b/, n:'Parfum (fragrance)', s:'medium', d:'Mélange de composés rarement détaillé ; premier allergène cosmétique.'},
+  {re:/peg-\d+|polyethylene glycol/, n:'PEG (éthoxylés)', s:'low', d:'Peuvent contenir du 1,4-dioxane, substance possiblement cancérigène.'},
+  {re:/phenoxyethanol/, n:'Phénoxyéthanol', s:'low', d:'Conservateur irritant ; toxicité à forte concentration.'}
+];
+
+const SEV_POINTS = { high:20, medium:10, low:4 };
+const SEV_LABEL  = { high:'Élevé', medium:'Modéré', low:'Faible' };
+const NUTRI_POINTS = { a:0, b:8, c:18, d:30, e:42 };
+const NUTRI_COLORS = { a:'#038141', b:'#85bb2f', c:'#fecb02', d:'#ee8100', e:'#e63e11' };
+
+/* =========================================================
+   3. DONNÉES DE SECOURS (si l'API est injoignable)
+   ========================================================= */
+const SAMPLES = {
+  '3017620422003': { product_name:'Pâte à tartiner aux noisettes et au cacao', brands:'Ferrero', quantity:'400 g', nutriscore_grade:'e', nova_group:4,
+    ingredients_text:'Sucre, huile de palme, NOISETTES 13%, cacao maigre 7,4%, lait écrémé en poudre 6,6%, émulsifiant : lécithines (soja) ; vanilline.',
+    additives_tags:['en:e322']},
+  '5449000000996': { product_name:'Coca-Cola', brands:'Coca-Cola', quantity:'1,5 L', nutriscore_grade:'e', nova_group:4,
+    ingredients_text:'Eau gazéifiée, sucre, colorant : E150d, acidifiant : acide phosphorique (E338), arômes, caféine.',
+    additives_tags:['en:e150d','en:e338'] }
+};
+
+/* =========================================================
+   4. UTILITAIRES
+   ========================================================= */
+const $ = s => document.querySelector(s);
+const norm = s => (s||'').toString().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove('show'),2800); }
+
+function hexToRgb(h){ const n=parseInt(h.slice(1),16); return [(n>>16)&255,(n>>8)&255,n&255]; }
+function rgbToHex([r,g,b]){ return '#'+[r,g,b].map(v=>Math.round(v).toString(16).padStart(2,'0')).join(''); }
+function mix(a,b,t){ const A=hexToRgb(a),B=hexToRgb(b); return rgbToHex(A.map((v,i)=>v+(B[i]-v)*t)); }
+
+// Dégradé de couleur selon le risque : vert → jaune → orange → rouge
+const PALETTE = [[0,'#22c55e'],[0.35,'#84cc16'],[0.55,'#eab308'],[0.75,'#f97316'],[1,'#ef4444']];
+function colorFor(v){
+  const t = Math.max(0, Math.min(1, v/100));
+  for (let i=1;i<PALETTE.length;i++){
+    const [t1,c1]=PALETTE[i], [t0,c0]=PALETTE[i-1];
+    if (t<=t1) return mix(c0,c1,(t-t0)/(t1-t0));
+  }
+  return PALETTE[PALETTE.length-1][1];
+}
+
+/* =========================================================
+   5. CATÉGORIES UI
+   ========================================================= */
+let selectedCat = 'food';
+function renderCategories(){
+  $('#catGrid').innerHTML = CATEGORIES.map((c,i)=>`
+    <button class="cat reveal" style="--tint:${c.tint};--glow:${c.glow};transition-delay:${i*.06}s" onclick="pickCategory('${c.id}',true)">
+      <span class="go">Scanner →</span>
+      <span class="ico"><svg viewBox="0 0 24 24">${c.icon}</svg></span>
+      <div><h3>${c.name}</h3><p>${c.desc}</p></div>
+    </button>`).join('');
+  const chips = CATEGORIES.map(c=>`<button class="chip ${c.id===selectedCat?'on':''}" data-cat="${c.id}" onclick="pickCategory('${c.id}')">${c.name}</button>`).join('');
+  $('#scanChips').innerHTML = chips;
+  $('#modalChips').innerHTML = chips;
+  // Effet de lueur qui suit la souris
+  document.querySelectorAll('.cat').forEach(el=>{
+    el.addEventListener('pointermove',e=>{const r=el.getBoundingClientRect();el.style.setProperty('--mx',(e.clientX-r.left)+'px');el.style.setProperty('--my',(e.clientY-r.top)+'px');});
+  });
+  observeReveal();
+}
+function pickCategory(id, openCam=false){
+  selectedCat = id;
+  document.querySelectorAll('[data-cat]').forEach(b=>b.classList.toggle('on', b.dataset.cat===id));
+  const c = CATEGORIES.find(x=>x.id===id);
+  toast(`Catégorie : ${c.name} — ${CATEGORY_TIPS[id]}`);
+  if (openCam) openScanner(); else $('#scanner').scrollIntoView({behavior:'smooth'});
+}
+
+/* Code-barres décoratif */
+(function drawBars(){
+  let x=10, out='', seed=7;
+  const rnd=()=>{seed=(seed*9301+49297)%233280;return seed/233280;};
+  while(x<285){ const w=1+Math.floor(rnd()*4); const dark=rnd()>.45; if(dark) out+=`<rect x="${x}" y="8" width="${w}" height="120" fill="#0b1220"/>`; x+=w+1+Math.floor(rnd()*2); }
+  $('#bars').innerHTML = out;
+})();
+
+/* =========================================================
+   6. SCANNER (caméra + saisie)
+   ========================================================= */
+let stream=null, detectTimer=null, zxingControls=null, busy=false;
+/* ----- Consentement caméra ----- */
+const CONSENT_KEY = 'panierpur.camera';
+let sessionConsent = null;
+function getConsent(){ try{ return localStorage.getItem(CONSENT_KEY) || sessionConsent; }catch(e){ return sessionConsent; } }
+function setConsent(v){
+  sessionConsent = v;
+  try{ v ? localStorage.setItem(CONSENT_KEY, v) : localStorage.removeItem(CONSENT_KEY); }catch(e){}
+  renderCamStatus();
+}
+function renderCamStatus(){
+  const el = $('#camStatus'); if (!el) return;
+  const c = getConsent();
+  if (c==='granted') el.innerHTML = '🟢 Caméra autorisée · <a href="#" onclick="revokeCamera();return false" style="text-decoration:underline">retirer l’autorisation</a>';
+  else if (c==='denied') el.innerHTML = '🔴 Caméra refusée · <a href="#" onclick="showConsent();return false" style="text-decoration:underline">l’autoriser</a>';
+  else el.innerHTML = '⚪ Caméra non demandée — elle vous sera proposée au premier scan';
+}
+function revokeCamera(){
+  closeScanner();
+  setConsent('denied');
+  toast('Accès caméra retiré. Vous pouvez saisir le code manuellement.');
+}
+// Fenêtre d'explication avant la demande officielle du navigateur
+function showConsent(){ $('#consentModal').classList.add('show'); }
+function hideConsent(){ $('#consentModal').classList.remove('show'); }
+function acceptCamera(){
+  setConsent('granted');
+  hideConsent();
+  openScannerModal(true);   // appelé depuis un clic : le navigateur peut afficher sa demande
+}
+function refuseCamera(){
+  setConsent('denied');
+  hideConsent();
+  toast('Caméra désactivée. Saisissez votre code-barre ci-dessous.');
+  if (!$('#modal').classList.contains('show')) $('#manualCode').focus();
+  else $('#modalCode').focus();
+}
+function openScanner(){
+  const c = getConsent();
+  if (c==='granted') openScannerModal(true);
+  else if (c==='denied') openScannerModal(false);
+  else showConsent();   // jamais demandé : on explique d'abord
+}
+function openScannerModal(useCamera){
+  $('#modal').classList.add('show');
+  $('#modalCode').value='';
+  if (useCamera) startCamera();
+  else {
+    stopCamera();
+    $('#camMsg').innerHTML = 'Caméra désactivée.<br/><button class="btn" style="margin-top:10px;padding:10px 16px" onclick="showConsent()">Autoriser la caméra</button>';
+  }
+}
+function closeScanner(){
+  $('#modal').classList.remove('show');
+  stopCamera();
+}
+async function startCamera(){
+  const msg=$('#camMsg'); const video=$('#video');
+  msg.textContent='Demande d’accès à la caméra…';
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    msg.textContent='Caméra indisponible sur ce navigateur. Saisissez le code ci-dessous.'; return;
+  }
+  try{
+    stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}, width:{ideal:1280}, height:{ideal:960}}, audio:false});
+    video.srcObject = stream;
+    await video.play();
+    msg.textContent='Placez le code-barre dans le cadre';
+    if ('BarcodeDetector' in window){
+      const det = new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','code_128']});
+      detectTimer = setInterval(async()=>{
+        if (busy || video.readyState<2) return;
+        try{
+          const codes = await det.detect(video);
+          if (codes.length && codes[0].rawValue){ onDetected(codes[0].rawValue); }
+        }catch(e){}
+      }, 350);
+    } else {
+      await loadZXing();
+      if (window.ZXing){
+        const reader = new ZXing.BrowserMultiFormatReader();
+        zxingControls = await reader.decodeFromVideoElement(video, (res)=>{ if(res) onDetected(res.getText()); });
+      } else {
+        msg.textContent='Détection automatique indisponible. Saisissez le code ci-dessous.';
+      }
+    }
+  }catch(err){
+    if (err && err.name==='NotAllowedError'){
+      setConsent('denied');
+      msg.innerHTML='Accès refusé par le navigateur.<br/><small>Autorisez la caméra dans les réglages du site (icône cadenas), puis réessayez.</small>';
+    } else if (err && err.name==='NotFoundError'){
+      msg.textContent='Aucune caméra détectée. Saisissez le code manuellement.';
+    } else {
+      msg.textContent='Impossible d’ouvrir la caméra. Saisissez le code manuellement.';
+    }
+  }
+}
+function loadZXing(){
+  return new Promise(res=>{
+    if (window.ZXing) return res();
+    const s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js';
+    s.onload=()=>res(); s.onerror=()=>res();
+    document.head.appendChild(s);
+  });
+}
+function stopCamera(){
+  clearInterval(detectTimer); detectTimer=null;
+  try{ zxingControls && zxingControls.stop(); }catch(e){} zxingControls=null;
+  if (stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
+  const v=$('#video'); if (v) v.srcObject=null;
+}
+function onDetected(code){
+  if (busy) return;
+  // Vibration tactile si disponible
+  if (navigator.vibrate) navigator.vibrate(60);
+  closeScanner();
+  scanCode(code, selectedCat);
+}
+function analyzeManual(){ const c=$('#manualCode').value.replace(/\D/g,''); if(!c){toast('Saisissez un numéro de code-barre.');return;} scanCode(c, selectedCat); }
+function analyzeModal(){ const c=$('#modalCode').value.replace(/\D/g,''); if(!c){toast('Saisissez un numéro de code-barre.');return;} closeScanner(); scanCode(c, selectedCat); }
+
+/* =========================================================
+   7. RÉCUPÉRATION DU PRODUIT
+   ========================================================= */
+async function fetchFrom(dbKey, code){
+  try{
+    const r = await fetch(`${DB[dbKey]}${code}.json`);
+    if (!r.ok) return null;
+    const j = await r.json();
+    return j.status===1 ? {...j.product, _db:dbKey} : null;
+  }catch(e){ return null; }
+}
+async function findProduct(code, catId){
+  const cat = CATEGORIES.find(c=>c.id===catId);
+  const order = cat ? cat.db : ['off','obf','opf'];
+  for (const db of order){
+    const p = await fetchFrom(db, code);
+    if (p) return p;
+  }
+  if (SAMPLES[code]) return {...SAMPLES[code], _db:'sample', _offline:true};
+  return null;
+}
+
+/* =========================================================
+   8. ANALYSE
+   ========================================================= */
+function analyze(p){
+  const hazards = new Map();
+  const add = (key, info) => { if(!hazards.has(key)) hazards.set(key, info); };
+
+  // Additifs : tags Open Food Facts + codes E trouvés dans le texte
+  const tags = [...(p.additives_tags||[]), ...(p.additives_original_tags||[])];
+  tags.forEach(t=>{
+    const m = norm(t).match(/e\s?(\d{3,4})([a-z])?/);
+    if (m){ const code = ('E'+m[1]+(m[2]||'')).toUpperCase(); if (ADDITIVES[code]) add(code, {code, ...ADDITIVES[code], type:'Additif'}); }
+  });
+  const text = norm(p.ingredients_text_fr || p.ingredients_text || p.ingredients_text_en || '');
+  for (const m of text.matchAll(/\be\s?(\d{3}[a-z]?)\b/g)){
+    const code=('E'+m[1]).toUpperCase(); if (ADDITIVES[code]) add(code, {code, ...ADDITIVES[code], type:'Additif'});
+  }
+  // Ingrédients (cosmétiques / ménagers / substances)
+  INGREDIENTS.forEach((ing,i)=>{ if (ing.re.test(text)) add('ING'+i, {code:'', n:ing.n, s:ing.s, d:ing.d, type:'Ingrédient'}); });
+  // Ingrédients : conservateurs / nitrites présents dans les tags ingrédients (fallback)
+  (p.ingredients_analysis_tags||[]).forEach(t=>{ if (/palm-oil/.test(t)) add('PALM', {code:'', n:'Huile de palme', s:'low', d:'Très riche en graisses saturées ; souvent associée aux produits ultra-transformés.', type:'Ingrédient'}); });
+
+  const list = [...hazards.values()].sort((a,b)=>({high:0,medium:1,low:2}[a.s]-({high:0,medium:1,low:2}[b.s])));
+
+  // Score de risque 0-100
+  const grade = (p.nutriscore_grade||'').toLowerCase();
+  const nova  = parseInt(p.nova_group,10);
+  const hasFood = !!(grade || nova);
+  const hasIngr = !!text || tags.length>0;
+  const hasData = hasFood || hasIngr;
+
+  let pts = 0;
+  const breakdown = [];
+  if (grade && NUTRI_POINTS[grade]!==undefined){ pts += NUTRI_POINTS[grade]; breakdown.push(`Nutri-Score ${grade.toUpperCase()}`); }
+  if (nova===4){ pts += 15; breakdown.push('Ultra-transformé (NOVA 4)'); }
+  else if (nova===3){ pts += 6; breakdown.push('Transformé (NOVA 3)'); }
+  let hz = 0; list.forEach(h=>hz += SEV_POINTS[h.s]); pts += Math.min(hz, 60);
+  const score = hasData ? Math.round(Math.max(0,Math.min(100,pts))) : null;
+
+  return { list, score, grade, nova, hasData, breakdown };
+}
+
+/* =========================================================
+   9. RENDU DE LA FIOLE
+   ========================================================= */
+const vial = {
+  liquid:$('#liquid'), needle:$('#needle'), needleTxt:$('#needleTxt'),
+  s1:$('#s1'), s2:$('#s2'), s3:$('#s3'), ticks:$('#ticks'), bubbles:$('#bubbles'), big:$('#scoreBig')
+};
+const yFor = v => 400 - v*2.82;
+
+function buildTicks(){
+  let out='';
+  for (let v=0; v<=100; v+=10){
+    const y = yFor(v); const major = v%20===0;
+    out += `<line x1="${major?30:36}" y1="${y}" x2="40" y2="${y}" stroke="${major?'#e8f7f1':'#8fa99e'}" stroke-width="${major?2:1}" stroke-linecap="round" opacity="${major?1:.6}"/>`;
+    if (major) out += `<text x="24" y="${y+4}" text-anchor="end" class="tick-lbl major">${v}</text>`;
+  }
+  vial.ticks.innerHTML = out;
+  // bulles
+  let b='';
+  for (let i=0;i<9;i++){
+    const x = 68 + Math.random()*84, r = 2 + Math.random()*4, d = (Math.random()*3.5).toFixed(2);
+    b += `<circle class="bub" cx="${x.toFixed(1)}" cy="${(250+Math.random()*120).toFixed(0)}" r="${r.toFixed(1)}" fill="#fff" style="animation-delay:-${d}s"/>`;
+  }
+  vial.bubbles.innerHTML = b;
+}
+buildTicks();
+
+let currentFill = 0, rafId = null;
+function setFill(v){
+  const col = colorFor(v);
+  const y = yFor(v);
+  vial.liquid.setAttribute('transform', `translate(0 ${y.toFixed(2)})`);
+  vial.needle.setAttribute('transform', `translate(0 ${y.toFixed(2)})`);
+  vial.s1.setAttribute('stop-color', mix(col,'#ffffff',.35));
+  vial.s2.setAttribute('stop-color', col);
+  vial.s3.setAttribute('stop-color', mix(col,'#000000',.45));
+  vial.needleTxt.textContent = Math.round(v);
+  vial.big.innerHTML = `${Math.round(v)}<small>/100</small>`;
+  vial.big.style.color = col;
+  document.querySelectorAll('.wave').forEach(w=>{}); // placeholder for future effects
+  currentFill = v;
+}
+function animateFill(to, dur=1700){
+  cancelAnimationFrame(rafId);
+  const from = currentFill, t0 = performance.now();
+  const c1=1.45, c3=c1+1;
+  const step = now=>{
+    const t = Math.min(1,(now-t0)/dur);
+    const e = 1 + c3*Math.pow(t-1,3) + c1*Math.pow(t-1,2); // easeOutBack
+    setFill(Math.max(0,Math.min(100, from + (to-from)*e)));
+    if (t<1) rafId = requestAnimationFrame(step);
+    else setFill(to);
+  };
+  rafId = requestAnimationFrame(step);
+}
+
+function verdictFor(score){
+  if (score===null) return {label:'Données insuffisantes', color:'#94a3b8', text:'Ce produit n’a pas assez d’informations publiques pour être évalué.'};
+  if (score<=30)  return {label:'Produit pur', color:'#22c55e', text:'Peu ou pas de substances préoccupantes. Un bon choix pour votre panier.'};
+  if (score<=60)  return {label:'Consommation modérée', color:'#f59e0b', text:'Quelques additifs ou ingrédients à surveiller. Privilégiez des alternatives plus simples.'};
+  return {label:'À éviter', color:'#ef4444', text:'Présence de plusieurs substances à risque ou d’un profil ultra-transformé.'};
+}
+
+/* =========================================================
+   10. AFFICHAGE RÉSULTAT
+   ========================================================= */
+const ICON_WARN = '<svg viewBox="0 0 24 24"><path d="M12 3 2.5 20h19L12 3z"/><path d="M12 10v4M12 17.5v.01"/></svg>';
+const ICON_OK   = '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+
+async function scanCode(code, catId){
+  busy = true;
+  const sec = $('#resultSection');
+  sec.classList.add('show');
+  $('#resultGrid').style.display='none';
+  $('#loader').classList.add('show');
+  $('#loader').querySelector('span').textContent = `Recherche du code ${code}…`;
+  sec.scrollIntoView({behavior:'smooth', block:'start'});
+
+  const p = await findProduct(code, catId);
+  $('#loader').classList.remove('show');
+  busy = false;
+
+  if (!p){
+    $('#resultGrid').style.display='grid';
+    $('#pName').textContent='Produit introuvable';
+    $('#pBrand').textContent='Ce code n’existe pas dans la base sélectionnée.';
+    $('#pCode').textContent='Code : '+code;
+    $('#pImg').innerHTML='<svg viewBox="0 0 64 64" width="56" height="56"><circle cx="32" cy="32" r="28" fill="#e2e8f0"/><text x="32" y="42" text-anchor="middle" font-size="30" font-weight="900" fill="#64748b">?</text></svg>';
+    $('#pBadges').innerHTML='<span class="badge">Essayez une autre catégorie</span>';
+    renderVerdict(null, [], true);
+    animateFill(0);
+    toast('Produit non trouvé. Changez de catégorie ou vérifiez le code.');
+    return;
+  }
+
+  const name = p.product_name_fr || p.product_name || p.generic_name || 'Produit sans nom';
+  const brand = p.brands || '—';
+  const img = p.image_front_url || p.image_url || p.image_small_url;
+  $('#pName').textContent = name;
+  $('#pBrand').textContent = brand + (p.quantity ? ' · ' + p.quantity : '');
+  $('#pCode').textContent = 'EAN ' + code + (p._offline ? ' · mode hors-ligne' : '');
+  $('#pImg').innerHTML = img
+    ? `<img src="${img}" alt="${name.replace(/"/g,'')}" onerror="this.replaceWith(Object.assign(document.createElement('span'),{innerHTML:'📦',style:'font-size:40px'}))"/>`
+    : '<span style="font-size:40px">📦</span>';
+
+  const r = analyze(p);
+  const verdict = verdictFor(r.score);
+
+  let badges = '';
+  if (r.grade) badges += `<span class="badge"><span class="ns" style="background:${NUTRI_COLORS[r.grade]||'#64748b'}">${r.grade.toUpperCase()}</span>Nutri-Score</span>`;
+  if (r.nova) badges += `<span class="badge">NOVA ${r.nova}</span>`;
+  badges += `<span class="badge">${r.list.length} substance${r.list.length>1?'s':''} signalée${r.list.length>1?'s':''}</span>`;
+  $('#pBadges').innerHTML = badges;
+
+  renderVerdict(r.score, r.list);
+  animateFill(r.score ?? 0, 1900);
+  toast(verdict.label + (r.score!==null ? ` · ${r.score}/100` : ''));
+}
+
+function renderVerdict(score, list, notFound=false){
+  const v = verdictFor(score);
+  const lab = $('#verdictLabel');
+  lab.textContent = v.label;
+  lab.style.background = v.color + '26';
+  lab.style.color = v.color;
+  lab.style.border = `1px solid ${v.color}66`;
+  $('#verdictText').textContent = notFound ? 'Aucune donnée disponible pour ce code.' : v.text;
+  $('#scoreBig').style.color = v.color;
+  $('#hzCount').textContent = list.length ? `${list.length} élément${list.length>1?'s':''}` : '';
+
+  const box = $('#hzList');
+  if (!list.length){
+    box.innerHTML = `<div class="empty"><div class="big-ok">${ICON_OK}</div><b style="color:var(--text)">Aucun composant préoccupant détecté</b><p style="margin-top:6px;font-size:.9rem">${notFound?'Scannez un produit pour voir son analyse.':'Les ingrédients connus ne présentent pas de substance à risque signalée.'}</p></div>`;
+    return;
+  }
+  box.innerHTML = list.map((h,i)=>`
+    <div class="hz sev-${h.s}" style="--d:${i*.07}s">
+      <div class="hz-ic">${h.s==='low'?'i':ICON_WARN}</div>
+      <div>
+        <div class="hz-top">
+          <div><span class="hz-name">${h.n}</span>${h.code?`<span class="hz-code">${h.code}</span>`:''}</div>
+          <span class="pill">${SEV_LABEL[h.s]}</span>
+        </div>
+        <p>${h.d}</p>
+      </div>
+    </div>`).join('');
+}
+
+/* =========================================================
+   11. INTERACTIONS GÉNÉRALES
+   ========================================================= */
+let io;
+function observeReveal(){
+  if (!io){
+    io = new IntersectionObserver(entries=>{
+      entries.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target);} });
+    },{threshold:.12});
+  }
+  document.querySelectorAll('.reveal:not(.in)').forEach(el=>io.observe(el));
+}
+document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ if($('#consentModal').classList.contains('show')) refuseCamera(); else closeScanner(); } if(e.key==='Enter' && document.activeElement && document.activeElement.id==='manualCode') analyzeManual(); if(e.key==='Enter' && document.activeElement && document.activeElement.id==='modalCode') analyzeModal(); });
+$('#year').textContent = new Date().getFullYear();
+renderCategories();
+renderCamStatus();
+observeReveal();
+$('#manualCode').addEventListener('keydown',e=>{ if(e.key==='Enter') analyzeManual(); });
+$('#modalCode').addEventListener('keydown',e=>{ if(e.key==='Enter') analyzeModal(); });
+// Valeur initiale : fiole au repos (0)
+setFill(0);
+</script>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a48d161ebd364fe6',t:'MTc5MTcxMzU0Ng=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
