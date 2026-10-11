@@ -565,6 +565,8 @@
   .hz-alert-ic{flex:none;width:48px;height:48px;border-radius:14px;display:grid;place-items:center}
   .hz-alert.crit .hz-alert-ic{background:#ef4444;color:#fff}
   .hz-alert.warn .hz-alert-ic{background:#f59e0b;color:#1f1300}
+  .hz-alert.good{background:rgba(34,197,94,.14);border:2px solid #22c55e;animation:alertIn .5s both}
+  .hz-alert.good .hz-alert-ic{background:#22c55e;color:#04210f;font-size:1.4rem;font-weight:900}
   .hz-alert-ic svg{width:28px;height:28px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
   .hz-alert b{display:block;font-size:1.25rem;color:var(--text);font-weight:850}
   .hz-alert small{color:var(--muted);font-size:.95rem}
@@ -1115,8 +1117,13 @@ const INGREDIENTS = [
 ];
 
 const SEV_POINTS = { high:20, medium:10, low:4 };
+/* v17 — barème centré sur la composition : 60 % nutrition, 30 % additifs, 10 % transformation (NOVA). Le label bio n'entre pas dans le score. Échelle de risque 0 = pur, 100 = à éviter */
+const ADD_POINTS = { high:15, medium:8, low:3 };      // additifs : plafonné à 30
+const ADD_MAX = 30;
+const NOVA_POINTS = { 4:10, 3:6, 2:2, 1:0 };          // composition : degré de transformation (sur 10)
+const NOVA_UNKNOWN = 5;                               // NOVA inconnu : valeur moyenne
 const SEV_LABEL  = { high:'Élevé', medium:'Modéré', low:'Faible' };
-const NUTRI_POINTS = { a:0, b:8, c:18, d:30, e:42 };
+const NUTRI_POINTS = { a:0, b:15, c:30, d:45, e:60 };  // sur 60 (Nutri-Score)
 const NUTRI_COLORS = { a:'#038141', b:'#85bb2f', c:'#fecb02', d:'#ee8100', e:'#e63e11' };
 
 /* =========================================================
@@ -1341,17 +1348,22 @@ function analyze(p){
   const hasIngr = !!text || tags.length>0;
   const hasData = hasFood || hasIngr;
 
-  let pts = 0;
   const breakdown = [];
-  let pNutri = 0, pNova = 0, pHz = 0;
-  if (grade && NUTRI_POINTS[grade]!==undefined){ pNutri = NUTRI_POINTS[grade]; pts += pNutri; breakdown.push(`Nutri-Score ${grade.toUpperCase()} (+${pNutri})`); }
-  if (nova===4){ pNova = 15; pts += pNova; breakdown.push(`Ultra-transformé NOVA 4 (+${pNova})`); }
-  else if (nova===3){ pNova = 6; pts += pNova; breakdown.push(`Transformé NOVA 3 (+${pNova})`); }
-  let hz = 0; list.forEach(h=>hz += SEV_POINTS[h.s]); pHz = Math.min(hz, 60); pts += pHz;
-  if (pHz) breakdown.push(`Substances signalées (+${pHz})`);
-  const score = hasData ? Math.round(Math.max(0,Math.min(100,pts))) : null;
+  // 1) Nutrition (60) : Nutri-Score ; sans Nutri-Score, valeur moyenne neutre
+  let pNutri = 0;
+  if (grade && NUTRI_POINTS[grade]!==undefined){ pNutri = NUTRI_POINTS[grade]; breakdown.push(`Nutri-Score ${grade.toUpperCase()} (+${pNutri})`); }
+  else if (hasData){ pNutri = 30; breakdown.push('Nutri-Score inconnu, valeur moyenne (+30)'); }
+  // 2) Additifs (30) : huile de palme comptée dans la nutrition, pas dans les additifs
+  const addList = list.filter(h => h.n !== 'Huile de palme');
+  let pAdd = 0; addList.forEach(h => pAdd += ADD_POINTS[h.s] || 0); pAdd = Math.min(pAdd, ADD_MAX);
+  if (pAdd) breakdown.push(`Additifs à risque (+${pAdd})`);
+  // 3) Transformation (10) : NOVA, déduit de la composition réelle (pas de label)
+  let pNova = hasData ? NOVA_UNKNOWN : 0;
+  if (nova && NOVA_POINTS[nova]!==undefined) pNova = NOVA_POINTS[nova];
+  if (hasData) breakdown.push(nova ? `Ultra-transformation NOVA ${nova} (+${pNova})` : `Transformation inconnue, valeur moyenne (+${pNova})`);
+  const score = hasData ? Math.round(Math.max(0, Math.min(100, pNutri + pAdd + pNova))) : null;
 
-  return { list, score, grade, nova, hasData, breakdown, hasHigh: list.some(h => h.s === 'high'), parts:{nutri:pNutri, nova:pNova, hz:pHz} };
+  return { list, score, grade, nova, hasData, breakdown, hasHigh: list.some(h => h.s === 'high'), parts:{nutri:pNutri, add:pAdd, nova:pNova} };
 }
 
 /* =========================================================
@@ -2755,10 +2767,12 @@ setSound(LS.get('sound', true) !== false);
 /* --- V12 : bandeau des substances nocives, affiché au verdict --- */
 function driverText(parts){
   if (!parts) return '';
-  const food = (parts.nutri || 0) + (parts.nova || 0), sub = parts.hz || 0;
-  if (!food && !sub) return 'Aucun facteur de risque retenu.';
-  if (sub >= food) return `Le score vient surtout des substances signalées (+${sub} pts).`;
-  return `Le score vient surtout de la composition nutritionnelle et de la transformation (+${food} pts). Les substances signalées ajoutent +${sub} pt${sub>1?'s':''}.`;
+  const food = (parts.nutri||0) + (parts.nova||0), add = parts.add||0;
+  if (!food && !add) return 'Aucun facteur de risque retenu.';
+  if (add > food) return `Le score vient surtout des additifs à risque (+${add} pts).`;
+  const novaTxt = parts.nova ? ' et du degré de transformation' : '';
+  const addTxt = add ? ` Les additifs à risque ajoutent +${add} pt${add>1?'s':''}.` : '';
+  return `Le score vient surtout de la composition nutritionnelle${novaTxt} (+${food} pts).${addTxt}`;
 }
 function showHazardAlert(list, score, breakdown, parts){
   const box = $('#hzAlert');
@@ -2767,12 +2781,13 @@ function showHazardAlert(list, score, breakdown, parts){
   const ordered = ['high','medium','low'].flatMap(s => list.filter(h => h.s === s));
   const crit = isAvoid(score, list.some(h => h.s === 'high'));
   const hi = list.filter(h => h.s === 'high').length;
-  box.className = 'hz-alert ' + (crit ? 'crit' : 'warn');
+  const pure = !crit && score !== null && score <= 30;   // même seuil que « Produit pur »
+  box.className = 'hz-alert ' + (crit ? 'crit' : pure ? 'good' : 'warn');
   box.innerHTML = `
     <div class="hz-alert-h">
-      <span class="hz-alert-ic">${ICON_WARN}</span>
+      <span class="hz-alert-ic">${pure ? '✓' : ICON_WARN}</span>
       <div>
-        <b>${crit ? '⛔ Produit à éviter' : '⚠ Produit à surveiller'} · ${score ?? '—'}/100</b>
+        <b>${crit ? '⛔ Produit à éviter' : pure ? '✓ Produit pur' : '⚠ Produit à surveiller'} · ${score ?? '—'}/100</b>
         <small>${driverText(parts)}</small>
       </div>
     </div>
@@ -2797,5 +2812,5 @@ function setJacques(score){
   box.style.display = 'flex';
 }
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a48de3ff7c73f4ff',t:'MTc5MTcyMTk3OA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a48dfeb9de18d506',t:'MTc5MTcyMzA3Mw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
