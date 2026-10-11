@@ -553,6 +553,10 @@
     *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition:none!important}
     .reveal{opacity:1;transform:none}
   }
+  /* ---------- V11 : PANIER DE RÉSULTAT À CÔTÉ DE LA PHOTO ---------- */
+  #vialWrap{display:none;flex:none;width:clamp(120px,15vw,170px);flex-direction:column;align-items:center}
+  #vialWrap .vial-svg{width:100%;max-width:170px;height:auto;overflow:visible}
+  @media (max-width:640px){ .ro-product{flex-wrap:wrap;justify-content:center} #vialWrap{width:130px} }
 </style>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#06120e">
@@ -573,13 +577,13 @@
     <symbol id="logo" viewBox="0 0 64 64">
       <circle cx="32" cy="32" r="30" fill="url(#logoG)"/>
       <circle cx="32" cy="32" r="30" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="1.5"/>
-      <!-- fiole -->
-      <path d="M26 12h12v6h-1v8c6 3.5 9 8 9 13 0 6.6-5.4 11-12 11s-12-4.4-12-11c0-5 3-9.5 9-13v-8h-1z" fill="#ffffff" opacity=".95"/>
-      <path d="M22.5 37c0-4 3-7.2 9.5-7.2S41.5 33 41.5 37c0 4.9-4 7.5-9.5 7.5S22.5 41.9 22.5 37z" fill="#10b981"/>
-      <!-- feuille -->
-      <path d="M44 14c6 0 9 3.5 9 9-6 0-9-3.5-9-9z" fill="url(#logoLeaf)"/>
-      <circle cx="29" cy="34" r="1.6" fill="#fff" opacity=".8"/>
-      <circle cx="35" cy="31" r="1.1" fill="#fff" opacity=".7"/>
+      <!-- anse -->
+      <path d="M22 30 Q22 12 32 12 Q42 12 42 30" fill="none" stroke="#ffffff" stroke-width="4.5" stroke-linecap="round"/>
+      <!-- corps rempli de vert -->
+      <path d="M18 33 H46 L42.5 50 Q42 53 39 53 H25 Q22 53 21.5 50 Z" fill="#10b981" stroke="#ffffff" stroke-width="1.5" stroke-linejoin="round"/>
+      <path d="M19.5 40 H44.5 M20.5 46 H43.5" stroke="#a7f3d0" stroke-width="1.2" opacity=".7"/>
+      <!-- bord -->
+      <rect x="15" y="29" width="34" height="6" rx="3" fill="#ffffff"/>
     </symbol>
     <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
       <feGaussianBlur stdDeviation="4" result="b"/>
@@ -775,6 +779,54 @@
       <div class="ro-top">
         <div class="ro-product">
           <div class="product-img big" id="pImg"></div>
+          <div id="vialWrap">
+            <svg class="vial-svg" viewBox="0 0 300 330" id="vial" aria-label="Panier de niveau de risque">
+              <defs>
+                <clipPath id="vialClip"><path d="M92 132 H218 L204 296 Q202 306 190 306 H120 Q108 306 106 296 Z"/></clipPath>
+                <linearGradient id="liqGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop id="s1" offset="0" stop-color="#22c55e"/>
+                  <stop id="s2" offset=".55" stop-color="#16a34a"/>
+                  <stop id="s3" offset="1" stop-color="#14532d"/>
+                </linearGradient>
+                <linearGradient id="wickerG" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stop-color="#e2b07a"/><stop offset="1" stop-color="#9a6234"/>
+                </linearGradient>
+              </defs>
+              <!-- anse -->
+              <path d="M118 140 Q118 30 155 30 Q192 30 192 140" fill="none" stroke="url(#wickerG)" stroke-width="13" stroke-linecap="round"/>
+              <!-- corps du panier -->
+              <path d="M92 132 H218 L204 296 Q202 306 190 306 H120 Q108 306 106 296 Z" fill="rgba(255,255,255,.05)"/>
+              <!-- liquide (remplissage couleur) -->
+              <g clip-path="url(#vialClip)">
+                <g id="liquid" transform="translate(0 300)" class="fill-glow">
+                  <g class="wave"><path d="M-220 0 q27.5 -12 55 0 t55 0 t55 0 t55 0 t55 0 t55 0 t55 0 t55 0 V460 H-220 Z" fill="url(#liqGrad)"/></g>
+                  <g class="wave b"><path d="M-220 6 q27.5 10 55 0 t55 0 t55 0 t55 0 t55 0 t55 0 t55 0 t55 0 V460 H-220 Z" fill="#fff" opacity=".12"/></g>
+                  <g id="bubbles"></g>
+                </g>
+              </g>
+              <!-- tressage -->
+              <g fill="none" stroke="#7a4a22" stroke-width="2" opacity=".4">
+                <path d="M93.5 150 H216.5 M95.4 172 H214.6 M97.3 194 H212.7 M99.2 216 H210.8 M101.1 238 H208.9 M102.9 260 H207.1 M104.8 282 H205.2"/>
+                <path d="M110 132 L119 296 M132 132 L137.1 296 M155 132 L155 296 M178 132 L172.9 296 M200 132 L190 296"/>
+              </g>
+              <!-- reflet -->
+              <path d="M104 162 L112 282" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".25"/>
+              <!-- bord du panier -->
+              <rect x="82" y="124" width="146" height="16" rx="8" fill="url(#wickerG)" stroke="#5c3a1a" stroke-width="1.5"/>
+              <!-- graduations gauche -->
+              <g id="ticks"></g>
+              <!-- zones (bande droite) -->
+              <rect x="262" y="250.5" width="6" height="49.5" rx="3" fill="#22c55e" opacity=".85"/>
+              <rect x="262" y="201" width="6" height="49.5" rx="3" fill="#f59e0b" opacity=".85"/>
+              <rect x="262" y="135" width="6" height="66" rx="3" fill="#ef4444" opacity=".85"/>
+              <!-- curseur -->
+              <g id="needle" transform="translate(0 300)">
+                <polygon points="240,0 250,-7 250,7" fill="#fff"/>
+                <text x="256" y="8" class="needle-txt" id="needleTxt">0</text>
+              </g>
+            </svg>
+          </div>
+
           <div>
             <div class="product-name xl" id="pName">—</div>
             <div class="product-brand" id="pBrand">—</div>
@@ -797,72 +849,6 @@
       <div class="ro-grid">
         <div class="ro-left">
           <div id="jacRes" class="jac-res" style="display:none"><img id="jacResImg" alt="Réaction de Jacques Brother-Victory" width="433" height="720" /><div class="jac-bubble" id="jacResTxt"></div></div>
-          <div id="vialWrap">
-            <svg class="vial-svg" viewBox="0 0 240 440" id="vial" aria-label="Fiole de niveau de risque">
-            <defs>
-              <clipPath id="vialClip">
-                <path d="M78 98 H142 V110 Q176 120 176 160 V380 Q176 412 144 412 H76 Q44 412 44 380 V160 Q44 120 78 110 Z"/>
-              </clipPath>
-              <linearGradient id="liqGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop id="s1" offset="0" stop-color="#22c55e"/>
-                <stop id="s2" offset=".55" stop-color="#16a34a"/>
-                <stop id="s3" offset="1" stop-color="#14532d"/>
-              </linearGradient>
-              <linearGradient id="glassG" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0" stop-color="#fff" stop-opacity=".02"/>
-                <stop offset=".3" stop-color="#fff" stop-opacity=".22"/>
-                <stop offset=".5" stop-color="#fff" stop-opacity=".05"/>
-                <stop offset=".85" stop-color="#fff" stop-opacity=".16"/>
-                <stop offset="1" stop-color="#fff" stop-opacity=".02"/>
-              </linearGradient>
-              <linearGradient id="capG" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0" stop-color="#1e293b"/><stop offset=".5" stop-color="#475569"/><stop offset="1" stop-color="#1e293b"/>
-              </linearGradient>
-            </defs>
-
-            <!-- bouchon -->
-            <g class="vial-idle">
-              <rect x="72" y="22" width="76" height="30" rx="8" fill="url(#capG)"/>
-              <rect x="66" y="50" width="88" height="14" rx="5" fill="url(#capG)"/>
-
-              <!-- fond du verre -->
-              <path d="M78 98 H142 V110 Q176 120 176 160 V380 Q176 412 144 412 H76 Q44 412 44 380 V160 Q44 120 78 110 Z" fill="rgba(255,255,255,.04)"/>
-
-              <!-- liquide -->
-              <g clip-path="url(#vialClip)">
-                <g id="liquid" transform="translate(0 400)" class="fill-glow">
-                  <g class="wave">
-                    <path d="M-220 0 q27.5 -12 55 0 t55 0 t55 0 t55 0 t55 0 t55 0 t55 0 t55 0 V460 H-220 Z" fill="url(#liqGrad)"/>
-                  </g>
-                  <g class="wave b">
-                    <path d="M-220 6 q27.5 10 55 0 t55 0 t55 0 t55 0 t55 0 t55 0 t55 0 t55 0 V460 H-220 Z" fill="#fff" opacity=".12"/>
-                  </g>
-                  <g id="bubbles"></g>
-                </g>
-              </g>
-
-              <!-- contour du verre -->
-              <path d="M78 98 H142 V110 Q176 120 176 160 V380 Q176 412 144 412 H76 Q44 412 44 380 V160 Q44 120 78 110 Z" fill="url(#glassG)" stroke="rgba(255,255,255,.45)" stroke-width="2.5"/>
-              <!-- reflets -->
-              <path class="glint" d="M60 170 V360" stroke="#fff" stroke-width="5" stroke-linecap="round" opacity=".5"/>
-              <path d="M158 170 V240" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".35"/>
-            </g>
-
-            <!-- graduations gauche -->
-            <g id="ticks"></g>
-
-            <!-- zones (bande droite) -->
-            <rect x="222" y="315" width="6" height="85" rx="3" fill="#22c55e" opacity=".85"/>
-            <rect x="222" y="233" width="6" height="82" rx="3" fill="#f59e0b" opacity=".85"/>
-            <rect x="222" y="118" width="6" height="115" rx="3" fill="#ef4444" opacity=".85"/>
-
-            <!-- aiguille / curseur -->
-            <g id="needle" transform="translate(0 400)">
-              <polygon points="180,0 190,-7 190,7" fill="#fff"/>
-              <text x="198" y="8" class="needle-txt" id="needleTxt">0</text>
-            </g>
-          </svg>
-          </div>
           <div class="verdict" id="verdictBox">
             <div class="big" id="scoreBig">0<small>/100</small></div>
             <span class="label" id="verdictLabel">—</span>
@@ -1351,21 +1337,21 @@ const vial = {
   liquid:$('#liquid'), needle:$('#needle'), needleTxt:$('#needleTxt'),
   s1:$('#s1'), s2:$('#s2'), s3:$('#s3'), ticks:$('#ticks'), bubbles:$('#bubbles'), big:$('#scoreBig')
 };
-const yFor = v => 400 - v*2.82;
+const yFor = v => 300 - v*1.65;
 
 function buildTicks(){
   let out='';
   for (let v=0; v<=100; v+=10){
     const y = yFor(v); const major = v%20===0;
-    out += `<line x1="${major?30:36}" y1="${y}" x2="40" y2="${y}" stroke="${major?'#e8f7f1':'#8fa99e'}" stroke-width="${major?2:1}" stroke-linecap="round" opacity="${major?1:.6}"/>`;
-    if (major) out += `<text x="24" y="${y+4}" text-anchor="end" class="tick-lbl major">${v}</text>`;
+    out += `<line x1="${major?50:58}" y1="${y}" x2="70" y2="${y}" stroke="${major?'#e8f7f1':'#8fa99e'}" stroke-width="${major?2:1}" stroke-linecap="round" opacity="${major?1:.6}"/>`;
+    if (major) out += `<text x="46" y="${y+4}" text-anchor="end" class="tick-lbl major">${v}</text>`;
   }
   vial.ticks.innerHTML = out;
   // bulles
   let b='';
   for (let i=0;i<9;i++){
-    const x = 68 + Math.random()*84, r = 2 + Math.random()*4, d = (Math.random()*3.5).toFixed(2);
-    b += `<circle class="bub" cx="${x.toFixed(1)}" cy="${(250+Math.random()*120).toFixed(0)}" r="${r.toFixed(1)}" fill="#fff" style="animation-delay:-${d}s"/>`;
+    const x = 112 + Math.random()*84, r = 2 + Math.random()*4, d = (Math.random()*3.5).toFixed(2);
+    b += `<circle class="bub" cx="${x.toFixed(1)}" cy="${(20+Math.random()*130).toFixed(0)}" r="${r.toFixed(1)}" fill="#fff" style="animation-delay:-${d}s"/>`;
   }
   vial.bubbles.innerHTML = b;
 }
@@ -1436,13 +1422,14 @@ function tone(freq, t0, dur, type='sine', vol=.2, endFreq=null){
 }
 // Bulles qui montent pendant le remplissage
 function soundFill(dur){
-  const c = ac(); if (!c || muted) return;
+  const c = ac(); if (!c || muted) return null;
   const t = c.currentTime, n = Math.round(dur * 16);
   for (let i = 0; i < n; i++){
     const p = i / n, f = 240 + p * 760 + Math.random() * 120;
     tone(f, t + p * dur + Math.random() * 0.03, .12, 'sine', .06, f * 1.4);
   }
   tone(110, t, dur, 'sine', .035, 260);
+  return t;
 }
 // Son final selon le verdict
 function soundVerdict(score){
@@ -1476,13 +1463,15 @@ function closeResult(){
 }
 
 /* --- Remplissage animé de la fiole (temps réel) --- */
-function runFill(to, dur, cb){
+function runFill(to, dur, cb, audioT0){
   cancelAnimationFrame(rafId);
-  const from = currentFill, t0 = performance.now(), c1 = 1.2, c3 = c1 + 1;
-  const step = now => {
-    const t = Math.min(1, (now - t0) / dur);
-    const e = t < 1 ? 1 + c3*Math.pow(t-1,3) + c1*Math.pow(t-1,2) : 1; // easeOutBack
-    setFill(Math.max(0, Math.min(100, from + (to - from) * e)));
+  const from = currentFill, perf0 = performance.now();
+  const useAudio = audioT0 !== null && audioT0 !== undefined && audioCtx && audioCtx.state === 'running';
+  const step = () => {
+    // Temps écoulé mesuré sur l'horloge audio quand le son joue : le liquide suit le son
+    const elapsed = useAudio ? (audioCtx.currentTime - audioT0) : (performance.now() - perf0) / 1000;
+    const t = Math.max(0, Math.min(1, elapsed / (dur / 1000)));
+    setFill(from + (to - from) * t);
     if (t < 1) rafId = requestAnimationFrame(step);
     else if (cb) cb();
   };
@@ -1614,13 +1603,13 @@ async function scanCode(code, catId){
 
   onProductRendered(p, r, code);
   const target = r.score ?? 0;
-  soundFill(2.3);
-  runFill(target, 2400, ()=>{
+  const a0 = soundFill(2.3);
+  runFill(target, 2300, ()=>{
     showStamp(r.score);
     soundVerdict(r.score);
     celebrate(r.score);
     if (r.score !== null && r.score > 60) $('#roPanel').classList.add('alert');
-  });
+  }, a0);
 }
 
 /* =========================================================
@@ -2749,5 +2738,5 @@ function setJacques(score){
   box.style.display = 'flex';
 }
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a48d84b4de5760df',t:'MTc5MTcxODA3NQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a48d99b34e4702c7',t:'MTc5MTcxODkzNQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
