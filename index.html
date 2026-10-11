@@ -249,6 +249,56 @@
   .cam .msg{position:absolute;inset:auto 0 16px;text-align:center;color:#d1fae5;font-size:.92rem;padding:0 16px}
   .modal .field{margin-top:16px}
 
+  /* ---------- RÉSULTAT PLEIN ÉCRAN ---------- */
+  .ro{position:fixed;inset:0;z-index:120;display:none;overflow-y:auto;padding:28px 16px;background:rgba(2,8,6,.86);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+  .ro.show{display:block;animation:fadeIn .35s both}
+  .ro-panel{width:min(1120px,100%);margin:0 auto;border-radius:32px;background:linear-gradient(170deg,#0c2019,#06120e);border:1px solid var(--border);padding:34px;position:relative;box-shadow:var(--shadow);animation:popIn .55s cubic-bezier(.2,.9,.3,1.2) both;overflow:hidden}
+  .ro-panel.alert{animation:popIn .55s both,alertBorder 1.4s ease-in-out .6s infinite}
+  @keyframes alertBorder{0%,100%{border-color:rgba(239,68,68,.35);box-shadow:var(--shadow)}50%{border-color:rgba(239,68,68,.95);box-shadow:0 0 0 6px rgba(239,68,68,.22),var(--shadow)}}
+  .ro-panel.alert::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 0%,rgba(239,68,68,.28),transparent 60%);pointer-events:none;animation:fadeIn 1s both}
+  .ro-panel.good::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 0%,rgba(34,197,94,.22),transparent 60%);pointer-events:none}
+  .ro-tools{position:absolute;top:18px;right:18px;display:flex;gap:8px;z-index:2}
+  .ro-btn{border:1px solid var(--border);background:var(--card-strong);color:var(--text);padding:9px 16px;border-radius:999px;cursor:pointer;font-weight:600;font-size:.9rem;transition:.2s}
+  .ro-btn:hover{background:rgba(255,255,255,.16)}
+  .ro-top{display:grid;grid-template-columns:1fr auto;gap:24px;align-items:center;margin-top:14px;position:relative;z-index:1}
+  .ro-product{display:flex;gap:24px;align-items:center;min-width:0}
+  .ro-product>div{min-width:0}
+  .product-img.big{width:170px;height:170px;border-radius:26px;flex:none}
+  .product-name.xl{font-size:clamp(1.4rem,3vw,2.1rem);line-height:1.15}
+  .stamp{--c:#94a3b8;color:var(--c);border:4px solid var(--c);border-radius:18px;padding:12px 22px;text-align:center;font-weight:900;font-size:clamp(1.3rem,2.6vw,1.9rem);letter-spacing:.06em;transform:rotate(-7deg);background:color-mix(in srgb,var(--c) 12%,transparent);display:none;text-transform:uppercase;white-space:nowrap}
+  .stamp.show{display:block;animation:stampIn .65s cubic-bezier(.2,1.5,.4,1) both}
+  .stamp small{display:block;font-size:.8rem;letter-spacing:.1em;margin-top:6px;opacity:.9;text-transform:none}
+  .stamp.good{--c:#22c55e}.stamp.mid{--c:#f59e0b}.stamp.bad{--c:#ef4444}.stamp.neutral{--c:#94a3b8}
+  .stamp.bad.show{animation:stampIn .65s cubic-bezier(.2,1.5,.4,1) both,stampGlow 1.2s ease-in-out .7s infinite}
+  @keyframes stampIn{0%{transform:rotate(-7deg) scale(2.6);opacity:0}100%{transform:rotate(-7deg) scale(1);opacity:1}}
+  @keyframes stampGlow{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0)}50%{box-shadow:0 0 34px 6px rgba(239,68,68,.55)}}
+  .ro-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:30px;margin-top:30px;position:relative;z-index:1}
+  .ro-left{display:flex;flex-direction:column;align-items:center;gap:12px}
+  #vialWrap{display:none;justify-content:center;width:100%}
+  #vialWrap .vial-svg{width:250px;height:auto;overflow:visible}
+  #vialWrap.danger .vial-svg{animation:dangerGlow 1s ease-in-out infinite}
+  @keyframes dangerGlow{0%,100%{filter:drop-shadow(0 0 0 rgba(239,68,68,0))}50%{filter:drop-shadow(0 0 22px rgba(239,68,68,.85))}}
+  #verdictBox{display:none;text-align:center;width:100%}
+  #verdictBox .big{font-size:4.2rem;font-weight:900;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums}
+  #verdictBox .big small{font-size:1.1rem;color:var(--muted);font-weight:700;margin-left:4px}
+  #verdictBox .label{display:inline-block;margin-top:12px;padding:8px 16px;border-radius:999px;font-weight:800;font-size:1rem}
+  #verdictBox p{color:var(--muted);font-size:.98rem;margin-top:12px}
+  .breakdown{font-size:.85rem;color:var(--muted);opacity:.85}
+  .ro-right{min-width:0}
+  .hz-summary{color:var(--muted);margin-top:8px;font-size:1rem}
+  .ro .hz-list{max-height:none;margin-top:16px}
+  .ro .hz p{font-size:1rem}
+  .ro .hz-name{font-size:1.1rem}
+  .ro .hz{padding:16px}
+  .ro .hz-count{font-size:.95rem;font-weight:700}
+  .ro .legend{justify-content:center}
+  @media (max-width:900px){
+    .ro-grid,.ro-top{grid-template-columns:1fr}
+    .ro-panel{padding:24px}
+    .product-img.big{width:120px;height:120px}
+    #vialWrap .vial-svg{width:200px}
+  }
+
   /* ---------- RESPONSIVE ---------- */
   @media (max-width:960px){
     .hero-grid,.scanner-box,.result-grid{grid-template-columns:1fr}
@@ -465,26 +515,75 @@
   </div>
 </section>
 
-<!-- RESULTS -->
-<section id="resultSection">
+<!-- COMMENT -->
+<section id="comment">
   <div class="wrap">
-    <div class="loader" id="loader"><div class="spinner"></div><span>Recherche du produit dans la base…</span></div>
-    <div class="result-grid" id="resultGrid" style="display:none">
+    <div class="reveal">
+      <div class="kicker">Comment ça marche</div>
+      <h2>De l'étiquette au verdict en trois gestes</h2>
+    </div>
+    <div class="steps">
+      <div class="step reveal"><div class="n">01</div><h3>Scannez</h3><p>Pointez la caméra vers le code-barre ou saisissez le numéro. Panier Pur reconnaît le produit dans sa base dédiée.</p></div>
+      <div class="step reveal" style="transition-delay:.12s"><div class="n">02</div><h3>Analysez</h3><p>Chaque additif, ingrédient et indice nutritionnel est comparé à une liste de substances étudiées par les autorités sanitaires.</p></div>
+      <div class="step reveal" style="transition-delay:.24s"><div class="n">03</div><h3>Choisissez</h3><p>La fiole se remplit selon le niveau de risque : vert pour un produit sain, rouge pour un produit à éviter.</p></div>
+    </div>
+  </div>
+</section>
 
-      <!-- Colonne fiole -->
-      <div class="glass reveal in" id="vialCard">
-        <div class="product-head">
-          <div class="product-img" id="pImg"></div>
+<!-- BANNER -->
+<section style="padding-top:20px">
+  <div class="wrap reveal">
+    <div class="banner">
+      <div class="shape"></div>
+      <div>
+        <h2>Votre panier, plus pur à chaque course.</h2>
+        <p>Scannez, comparez, remplacez. Une habitude simple pour réduire les substances indésirables au quotidien.</p>
+      </div>
+      <button class="btn" onclick="openScanner()" style="position:relative">Commencer le scan</button>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap row">
+    <div style="display:flex;align-items:center;gap:10px">
+      <svg width="28" height="28" viewBox="0 0 64 64"><use href="#logo"/></svg>
+      <span>© <span id="year"></span> Panier Pur — Données : Open Food Facts, Open Beauty Facts, Open Products Facts.</span>
+    </div>
+    <span>Outil d'information, ne remplace pas un avis médical.</span>
+  </div>
+</footer>
+
+<!-- RÉSULTAT PLEIN ÉCRAN (reste affiché jusqu'à fermeture) -->
+<div class="ro" id="resultOverlay" role="dialog" aria-modal="true" aria-label="Résultat de l'analyse">
+  <div class="ro-panel" id="roPanel">
+    <div class="ro-tools">
+      <button class="ro-btn" id="soundBtn" onclick="toggleSound()">🔊 Son</button>
+      <button class="ro-btn" onclick="closeResult()">✕ Fermer</button>
+    </div>
+
+    <div class="loader" id="loader"><div class="spinner"></div><span id="loaderTxt">Recherche…</span></div>
+
+    <div id="resultGrid" style="display:none">
+      <div class="ro-top">
+        <div class="ro-product">
+          <div class="product-img big" id="pImg"></div>
           <div>
-            <div class="product-name" id="pName">—</div>
+            <div class="product-name xl" id="pName">—</div>
             <div class="product-brand" id="pBrand">—</div>
             <div class="product-brand" id="pCode" style="font-size:.8rem;opacity:.7"></div>
+            <div class="badges" id="pBadges"></div>
           </div>
         </div>
-        <div class="badges" id="pBadges"></div>
+        <div class="stamp" id="stamp"><span id="stampTxt"></span><small id="stampSub"></small></div>
+      </div>
 
-        <div class="vial-area">
-          <svg class="vial-svg" viewBox="0 0 240 440" id="vial" aria-label="Fiole de niveau de risque">
+      <div class="ro-grid">
+        <div class="ro-left">
+          <div id="vialWrap">
+            <svg class="vial-svg" viewBox="0 0 240 440" id="vial" aria-label="Fiole de niveau de risque">
             <defs>
               <clipPath id="vialClip">
                 <path d="M78 98 H142 V110 Q176 120 176 160 V380 Q176 412 144 412 H76 Q44 412 44 380 V160 Q44 120 78 110 Z"/>
@@ -548,11 +647,12 @@
               <text x="198" y="8" class="needle-txt" id="needleTxt">0</text>
             </g>
           </svg>
-
-          <div class="verdict">
+          </div>
+          <div class="verdict" id="verdictBox">
             <div class="big" id="scoreBig">0<small>/100</small></div>
             <span class="label" id="verdictLabel">—</span>
             <p id="verdictText">—</p>
+            <p class="breakdown" id="breakdown"></p>
             <div class="legend">
               <span><i style="background:#22c55e"></i>0–30 Pur</span>
               <span><i style="background:#f59e0b"></i>30–60 Modéré</span>
@@ -560,61 +660,17 @@
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Colonne composants dangereux -->
-      <div class="glass reveal in" id="hazCard">
-        <div class="hz-head">
-          <h3>Composants à surveiller</h3>
-          <span class="hz-count" id="hzCount"></span>
+        <div class="ro-right">
+          <div class="hz-head"><h3>Composants nocifs</h3><span class="hz-count" id="hzCount"></span></div>
+          <p class="hz-summary" id="hzSummary"></p>
+          <div class="hz-list" id="hzList"></div>
         </div>
-        <div class="hz-list" id="hzList"></div>
-        <p class="hint" style="margin-top:16px">Les seuils et effets décrits sont indicatifs et reposent sur les avis publics (EFSA, CIRC, réglementations). En cas de doute, consultez un professionnel de santé.</p>
       </div>
+      <p class="hint" style="margin-top:22px">Les seuils et effets décrits sont indicatifs et reposent sur les avis publics (EFSA, CIRC, réglementations). En cas de doute, consultez un professionnel de santé.</p>
     </div>
   </div>
-</section>
-
-<!-- COMMENT -->
-<section id="comment">
-  <div class="wrap">
-    <div class="reveal">
-      <div class="kicker">Comment ça marche</div>
-      <h2>De l'étiquette au verdict en trois gestes</h2>
-    </div>
-    <div class="steps">
-      <div class="step reveal"><div class="n">01</div><h3>Scannez</h3><p>Pointez la caméra vers le code-barre ou saisissez le numéro. Panier Pur reconnaît le produit dans sa base dédiée.</p></div>
-      <div class="step reveal" style="transition-delay:.12s"><div class="n">02</div><h3>Analysez</h3><p>Chaque additif, ingrédient et indice nutritionnel est comparé à une liste de substances étudiées par les autorités sanitaires.</p></div>
-      <div class="step reveal" style="transition-delay:.24s"><div class="n">03</div><h3>Choisissez</h3><p>La fiole se remplit selon le niveau de risque : vert pour un produit sain, rouge pour un produit à éviter.</p></div>
-    </div>
-  </div>
-</section>
-
-<!-- BANNER -->
-<section style="padding-top:20px">
-  <div class="wrap reveal">
-    <div class="banner">
-      <div class="shape"></div>
-      <div>
-        <h2>Votre panier, plus pur à chaque course.</h2>
-        <p>Scannez, comparez, remplacez. Une habitude simple pour réduire les substances indésirables au quotidien.</p>
-      </div>
-      <button class="btn" onclick="openScanner()" style="position:relative">Commencer le scan</button>
-    </div>
-  </div>
-</section>
-
-</main>
-
-<footer>
-  <div class="wrap row">
-    <div style="display:flex;align-items:center;gap:10px">
-      <svg width="28" height="28" viewBox="0 0 64 64"><use href="#logo"/></svg>
-      <span>© <span id="year"></span> Panier Pur — Données : Open Food Facts, Open Beauty Facts, Open Products Facts.</span>
-    </div>
-    <span>Outil d'information, ne remplace pas un avis médical.</span>
-  </div>
-</footer>
+</div>
 
 <!-- MODAL SCANNER -->
 <div class="modal" id="modal" onclick="if(event.target===this)closeScanner()">
@@ -1071,49 +1127,184 @@ function verdictFor(score){
 }
 
 /* =========================================================
-   10. AFFICHAGE RÉSULTAT
+   10. AFFICHAGE RÉSULTAT + SONS
    ========================================================= */
 const ICON_WARN = '<svg viewBox="0 0 24 24"><path d="M12 3 2.5 20h19L12 3z"/><path d="M12 10v4M12 17.5v.01"/></svg>';
 const ICON_OK   = '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 
+/* --- Sons (synthétisés, aucun fichier) --- */
+let muted = false, audioCtx = null;
+function ac(){
+  try{
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
+  }catch(e){ return null; }
+}
+document.addEventListener('pointerdown', ()=>ac());
+function toggleSound(){ muted = !muted; $('#soundBtn').textContent = muted ? '🔇 Son coupé' : '🔊 Son'; }
+function tone(freq, t0, dur, type='sine', vol=.2, endFreq=null){
+  const c = ac(); if (!c || muted) return;
+  const o = c.createOscillator(), g = c.createGain();
+  o.type = type; o.frequency.setValueAtTime(freq, t0);
+  if (endFreq) o.frequency.exponentialRampToValueAtTime(endFreq, t0 + dur);
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(vol, t0 + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  o.connect(g).connect(c.destination);
+  o.start(t0); o.stop(t0 + dur + 0.05);
+}
+// Bulles qui montent pendant le remplissage
+function soundFill(dur){
+  const c = ac(); if (!c || muted) return;
+  const t = c.currentTime, n = Math.round(dur * 16);
+  for (let i = 0; i < n; i++){
+    const p = i / n, f = 240 + p * 760 + Math.random() * 120;
+    tone(f, t + p * dur + Math.random() * 0.03, .12, 'sine', .06, f * 1.4);
+  }
+  tone(110, t, dur, 'sine', .035, 260);
+}
+// Son final selon le verdict
+function soundVerdict(score){
+  const c = ac(); if (!c || muted) return;
+  const t = c.currentTime;
+  if (score === null){ tone(520, t, .14, 'triangle', .15); return; }
+  if (score <= 30){                       // positif : arpège ascendant
+    [523, 659, 784, 1047].forEach((f,i)=>tone(f, t + i*.11, .4, 'triangle', .22));
+  } else if (score <= 60){                // attention : deux bips
+    tone(660, t, .2, 'square', .08); tone(660, t + .28, .2, 'square', .08);
+  } else {                                // alarme : sirènes + grave
+    const cycles = score > 80 ? 4 : 2;
+    for (let k = 0; k < cycles; k++){
+      tone(720, t + k*.42, .2, 'sawtooth', .09, 480);
+      tone(480, t + k*.42 + .21, .2, 'sawtooth', .09, 720);
+    }
+    tone(70, t, .7, 'sine', .4, 40);
+  }
+}
+
+/* --- Ouverture / fermeture de l'overlay --- */
+function openResult(){
+  $('#resultOverlay').classList.add('show');
+  document.body.style.overflow = 'hidden';
+  $('#resultOverlay').scrollTop = 0;
+}
+function closeResult(){
+  $('#resultOverlay').classList.remove('show');
+  document.body.style.overflow = '';
+  cancelAnimationFrame(rafId);
+}
+
+/* --- Remplissage animé de la fiole (temps réel) --- */
+function runFill(to, dur, cb){
+  cancelAnimationFrame(rafId);
+  const from = currentFill, t0 = performance.now(), c1 = 1.2, c3 = c1 + 1;
+  const step = now => {
+    const t = Math.min(1, (now - t0) / dur);
+    const e = t < 1 ? 1 + c3*Math.pow(t-1,3) + c1*Math.pow(t-1,2) : 1; // easeOutBack
+    setFill(Math.max(0, Math.min(100, from + (to - from) * e)));
+    if (t < 1) rafId = requestAnimationFrame(step);
+    else if (cb) cb();
+  };
+  rafId = requestAnimationFrame(step);
+}
+
+/* --- Tampon de verdict --- */
+function stampFor(score){
+  if (score === null) return {cls:'neutral', txt:'Évaluation impossible', sub:'Données insuffisantes'};
+  if (score <= 30)    return {cls:'good', txt:'Produit pur',  sub:'✓ Bon choix pour votre panier'};
+  if (score <= 60)    return {cls:'mid',  txt:'À surveiller', sub:'⚠ Consommation modérée'};
+  if (score <= 80)    return {cls:'bad',  txt:'Toxique',      sub:'⚠ Produit à éviter'};
+  return                     {cls:'bad', txt:'Danger',       sub:'⛔ Substances à risque élevé'};
+}
+function showStamp(score){
+  const s = stampFor(score);
+  const el = $('#stamp');
+  el.className = 'stamp';
+  void el.offsetWidth;                 // relance l'animation
+  $('#stampTxt').textContent = s.txt;
+  $('#stampSub').textContent = s.sub;
+  el.className = `stamp show ${s.cls}`;
+}
+
+function verdictFor(score){
+  if (score===null) return {label:'Données insuffisantes', color:'#94a3b8', text:'Ce produit n’a pas assez d’informations publiques pour être évalué.'};
+  if (score<=30)  return {label:'Produit pur', color:'#22c55e', text:'Peu ou pas de substances préoccupantes. Un bon choix pour votre panier.'};
+  if (score<=60)  return {label:'Consommation modérée', color:'#f59e0b', text:'Quelques additifs ou ingrédients à surveiller. Privilégiez des alternatives plus simples.'};
+  return {label:'À éviter', color:'#ef4444', text:'Présence de plusieurs substances à risque ou d’un profil ultra-transformé.'};
+}
+
+/* --- Informations produit --- */
+function fillHead(p, code){
+  const name = p.product_name_fr || p.product_name || p.generic_name || 'Produit sans nom';
+  const img = p.image_front_url || p.image_url || p.image_small_url;
+  $('#pName').textContent = name;
+  $('#pBrand').textContent = (p.brands || '—') + (p.quantity ? ' · ' + p.quantity : '');
+  $('#pCode').textContent = 'EAN ' + code + (p._offline ? ' · mode hors-ligne' : '');
+  $('#pImg').innerHTML = img
+    ? `<img src="${img}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('span'),{innerHTML:'📦',style:'font-size:56px'}))"/>`
+    : '<span style="font-size:56px">📦</span>';
+}
+function renderHazards(list){
+  const box = $('#hzList');
+  $('#hzCount').textContent = list.length ? `${list.length} élément${list.length>1?'s':''}` : '';
+  if (!list.length){
+    $('#hzSummary').textContent = 'Aucun composant nocif connu n’a été détecté dans ce produit.';
+    box.innerHTML = `<div class="empty"><div class="big-ok">${ICON_OK}</div><b style="color:var(--text)">Aucun composant préoccupant</b><p style="margin-top:6px;font-size:.95rem">Les ingrédients connus ne présentent pas de substance à risque signalée.</p></div>`;
+    return;
+  }
+  const hi = list.filter(h=>h.s==='high').length, md = list.filter(h=>h.s==='medium').length, lo = list.filter(h=>h.s==='low').length;
+  $('#hzSummary').innerHTML = `<b style="color:#fca5a5">${hi} élevé${hi>1?'s':''}</b> · <b style="color:#fcd34d">${md} modéré${md>1?'s':''}</b> · <b style="color:#93c5fd">${lo} faible${lo>1?'s':''}</b>`;
+  box.innerHTML = list.map((h,i)=>`
+    <div class="hz sev-${h.s}" style="--d:${i*.08}s">
+      <div class="hz-ic">${h.s==='low'?'i':ICON_WARN}</div>
+      <div>
+        <div class="hz-top">
+          <div><span class="hz-name">${h.n}</span>${h.code?`<span class="hz-code">${h.code}</span>`:''}</div>
+          <span class="pill">${SEV_LABEL[h.s]}</span>
+        </div>
+        <p><b style="color:var(--text);font-weight:600">Effet sur la santé :</b> ${h.d}</p>
+      </div>
+    </div>`).join('');
+}
+
+/* --- Flux principal --- */
 async function scanCode(code, catId){
+  if (busy) return;
   busy = true;
-  const sec = $('#resultSection');
-  sec.classList.add('show');
-  $('#resultGrid').style.display='none';
+  openResult();
+  $('#roPanel').className = 'ro-panel';
+  $('#stamp').className = 'stamp';
+  $('#resultGrid').style.display = 'none';
+  $('#vialWrap').style.display = 'none';
+  $('#verdictBox').style.display = 'none';
   $('#loader').classList.add('show');
-  $('#loader').querySelector('span').textContent = `Recherche du code ${code}…`;
-  sec.scrollIntoView({behavior:'smooth', block:'start'});
+  $('#loaderTxt').textContent = `Recherche du code ${code}…`;
 
   const p = await findProduct(code, catId);
-  $('#loader').classList.remove('show');
   busy = false;
+  $('#loader').classList.remove('show');
+  $('#resultGrid').style.display = 'block';
 
   if (!p){
-    $('#resultGrid').style.display='grid';
-    $('#pName').textContent='Produit introuvable';
-    $('#pBrand').textContent='Ce code n’existe pas dans la base sélectionnée.';
-    $('#pCode').textContent='Code : '+code;
-    $('#pImg').innerHTML='<svg viewBox="0 0 64 64" width="56" height="56"><circle cx="32" cy="32" r="28" fill="#e2e8f0"/><text x="32" y="42" text-anchor="middle" font-size="30" font-weight="900" fill="#64748b">?</text></svg>';
-    $('#pBadges').innerHTML='<span class="badge">Essayez une autre catégorie</span>';
-    renderVerdict(null, [], true);
-    animateFill(0);
-    toast('Produit non trouvé. Changez de catégorie ou vérifiez le code.');
+    // Produit non reconnu : pas de fiole
+    fillHead({product_name:'Produit non reconnu'}, code);
+    $('#pName').textContent = 'Produit non reconnu';
+    $('#pBrand').textContent = 'Ce code-barre n’existe pas dans la base sélectionnée.';
+    $('#pBadges').innerHTML = '<span class="badge">Essayez une autre catégorie</span>';
+    $('#pImg').innerHTML = '<span style="font-size:56px">❓</span>';
+    $('#hzSummary').textContent = '';
+    $('#hzList').innerHTML = `<div class="empty"><b style="color:var(--text)">Impossible d’analyser ce produit</b><p style="margin-top:6px">Vérifiez le code ou changez de catégorie, puis relancez le scan.</p></div>`;
+    $('#hzCount').textContent = '';
+    showStamp(null);
+    soundVerdict(null);
     return;
   }
 
-  const name = p.product_name_fr || p.product_name || p.generic_name || 'Produit sans nom';
-  const brand = p.brands || '—';
-  const img = p.image_front_url || p.image_url || p.image_small_url;
-  $('#pName').textContent = name;
-  $('#pBrand').textContent = brand + (p.quantity ? ' · ' + p.quantity : '');
-  $('#pCode').textContent = 'EAN ' + code + (p._offline ? ' · mode hors-ligne' : '');
-  $('#pImg').innerHTML = img
-    ? `<img src="${img}" alt="${name.replace(/"/g,'')}" onerror="this.replaceWith(Object.assign(document.createElement('span'),{innerHTML:'📦',style:'font-size:40px'}))"/>`
-    : '<span style="font-size:40px">📦</span>';
-
+  // Produit reconnu : affichage complet
+  fillHead(p, code);
   const r = analyze(p);
-  const verdict = verdictFor(r.score);
+  const v = verdictFor(r.score);
 
   let badges = '';
   if (r.grade) badges += `<span class="badge"><span class="ns" style="background:${NUTRI_COLORS[r.grade]||'#64748b'}">${r.grade.toUpperCase()}</span>Nutri-Score</span>`;
@@ -1121,38 +1312,30 @@ async function scanCode(code, catId){
   badges += `<span class="badge">${r.list.length} substance${r.list.length>1?'s':''} signalée${r.list.length>1?'s':''}</span>`;
   $('#pBadges').innerHTML = badges;
 
-  renderVerdict(r.score, r.list);
-  animateFill(r.score ?? 0, 1900);
-  toast(verdict.label + (r.score!==null ? ` · ${r.score}/100` : ''));
-}
-
-function renderVerdict(score, list, notFound=false){
-  const v = verdictFor(score);
   const lab = $('#verdictLabel');
   lab.textContent = v.label;
   lab.style.background = v.color + '26';
   lab.style.color = v.color;
   lab.style.border = `1px solid ${v.color}66`;
-  $('#verdictText').textContent = notFound ? 'Aucune donnée disponible pour ce code.' : v.text;
+  $('#verdictText').textContent = v.text;
+  $('#breakdown').textContent = r.breakdown.length ? 'Détail du calcul : ' + r.breakdown.join(' · ') : '';
   $('#scoreBig').style.color = v.color;
-  $('#hzCount').textContent = list.length ? `${list.length} élément${list.length>1?'s':''}` : '';
+  renderHazards(r.list);
 
-  const box = $('#hzList');
-  if (!list.length){
-    box.innerHTML = `<div class="empty"><div class="big-ok">${ICON_OK}</div><b style="color:var(--text)">Aucun composant préoccupant détecté</b><p style="margin-top:6px;font-size:.9rem">${notFound?'Scannez un produit pour voir son analyse.':'Les ingrédients connus ne présentent pas de substance à risque signalée.'}</p></div>`;
-    return;
-  }
-  box.innerHTML = list.map((h,i)=>`
-    <div class="hz sev-${h.s}" style="--d:${i*.07}s">
-      <div class="hz-ic">${h.s==='low'?'i':ICON_WARN}</div>
-      <div>
-        <div class="hz-top">
-          <div><span class="hz-name">${h.n}</span>${h.code?`<span class="hz-code">${h.code}</span>`:''}</div>
-          <span class="pill">${SEV_LABEL[h.s]}</span>
-        </div>
-        <p>${h.d}</p>
-      </div>
-    </div>`).join('');
+  // La fiole n'apparaît qu'après reconnaissance du produit
+  $('#vialWrap').style.display = 'flex';
+  $('#verdictBox').style.display = 'block';
+  $('#vialWrap').classList.toggle('danger', r.score !== null && r.score > 60);
+  $('#roPanel').classList.toggle('good', r.score !== null && r.score <= 30);
+  setFill(0);
+
+  const target = r.score ?? 0;
+  soundFill(2.3);
+  runFill(target, 2400, ()=>{
+    showStamp(r.score);
+    soundVerdict(r.score);
+    if (r.score !== null && r.score > 60) $('#roPanel').classList.add('alert');
+  });
 }
 
 /* =========================================================
@@ -1167,7 +1350,7 @@ function observeReveal(){
   }
   document.querySelectorAll('.reveal:not(.in)').forEach(el=>io.observe(el));
 }
-document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ if($('#consentModal').classList.contains('show')) refuseCamera(); else closeScanner(); } if(e.key==='Enter' && document.activeElement && document.activeElement.id==='manualCode') analyzeManual(); if(e.key==='Enter' && document.activeElement && document.activeElement.id==='modalCode') analyzeModal(); });
+document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ if($('#consentModal').classList.contains('show')) refuseCamera(); else if ($('#resultOverlay').classList.contains('show')) closeResult(); else closeScanner(); } if(e.key==='Enter' && document.activeElement && document.activeElement.id==='manualCode') analyzeManual(); if(e.key==='Enter' && document.activeElement && document.activeElement.id==='modalCode') analyzeModal(); });
 $('#year').textContent = new Date().getFullYear();
 renderCategories();
 renderCamStatus();
@@ -1177,5 +1360,5 @@ $('#modalCode').addEventListener('keydown',e=>{ if(e.key==='Enter') analyzeModal
 // Valeur initiale : fiole au repos (0)
 setFill(0);
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a48d161ebd364fe6',t:'MTc5MTcxMzU0Ng=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a48d2c50ba0a7531',t:'MTc5MTcxNDQ1NQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
