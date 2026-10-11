@@ -878,7 +878,8 @@
             <div class="legend">
               <span><i style="background:#22c55e"></i>0–30 Pur</span>
               <span><i style="background:#f59e0b"></i>30–60 Modéré</span>
-              <span><i style="background:#ef4444"></i>60–100 À éviter</span>
+              <span><i style="background:#f59e0b"></i>61–70 À surveiller</span>
+              <span><i style="background:#ef4444"></i>71–100 ou substance à risque élevé : À éviter</span>
             </div>
           </div>
         </div>
@@ -1342,13 +1343,15 @@ function analyze(p){
 
   let pts = 0;
   const breakdown = [];
-  if (grade && NUTRI_POINTS[grade]!==undefined){ pts += NUTRI_POINTS[grade]; breakdown.push(`Nutri-Score ${grade.toUpperCase()}`); }
-  if (nova===4){ pts += 15; breakdown.push('Ultra-transformé (NOVA 4)'); }
-  else if (nova===3){ pts += 6; breakdown.push('Transformé (NOVA 3)'); }
-  let hz = 0; list.forEach(h=>hz += SEV_POINTS[h.s]); pts += Math.min(hz, 60);
+  let pNutri = 0, pNova = 0, pHz = 0;
+  if (grade && NUTRI_POINTS[grade]!==undefined){ pNutri = NUTRI_POINTS[grade]; pts += pNutri; breakdown.push(`Nutri-Score ${grade.toUpperCase()} (+${pNutri})`); }
+  if (nova===4){ pNova = 15; pts += pNova; breakdown.push(`Ultra-transformé NOVA 4 (+${pNova})`); }
+  else if (nova===3){ pNova = 6; pts += pNova; breakdown.push(`Transformé NOVA 3 (+${pNova})`); }
+  let hz = 0; list.forEach(h=>hz += SEV_POINTS[h.s]); pHz = Math.min(hz, 60); pts += pHz;
+  if (pHz) breakdown.push(`Substances signalées (+${pHz})`);
   const score = hasData ? Math.round(Math.max(0,Math.min(100,pts))) : null;
 
-  return { list, score, grade, nova, hasData, breakdown };
+  return { list, score, grade, nova, hasData, breakdown, hasHigh: list.some(h => h.s === 'high'), parts:{nutri:pNutri, nova:pNova, hz:pHz} };
 }
 
 /* =========================================================
@@ -1407,10 +1410,12 @@ function animateFill(to, dur=1700){
   rafId = requestAnimationFrame(step);
 }
 
-function verdictFor(score){
+function isAvoid(score, hasHigh){ return score!==null && (score>70 || !!hasHigh); }
+function verdictFor(score, hasHigh){
   if (score===null) return {label:'Données insuffisantes', color:'#94a3b8', text:'Ce produit n’a pas assez d’informations publiques pour être évalué.'};
   if (score<=30)  return {label:'Produit pur', color:'#22c55e', text:'Peu ou pas de substances préoccupantes. Un bon choix pour votre panier.'};
   if (score<=60)  return {label:'Consommation modérée', color:'#f59e0b', text:'Quelques additifs ou ingrédients à surveiller. Privilégiez des alternatives plus simples.'};
+  if (!isAvoid(score, hasHigh)) return {label:'À surveiller', color:'#f59e0b', text:'Score élevé surtout lié à la composition nutritionnelle et à la transformation. Vérifiez les détails avant d’acheter.'};
   return {label:'À éviter', color:'#ef4444', text:'Présence de plusieurs substances à risque ou d’un profil ultra-transformé.'};
 }
 
@@ -1500,15 +1505,16 @@ function runFill(to, dur, cb, audioT0){
 }
 
 /* --- Tampon de verdict --- */
-function stampFor(score){
+function stampFor(score, hasHigh){
   if (score === null) return {cls:'neutral', txt:'Évaluation impossible', sub:'Données insuffisantes'};
   if (score <= 30)    return {cls:'good', txt:'Produit pur',  sub:'✓ Bon choix pour votre panier'};
   if (score <= 60)    return {cls:'mid',  txt:'À surveiller', sub:'⚠ Consommation modérée'};
+  if (!isAvoid(score, hasHigh)) return {cls:'mid', txt:'À surveiller', sub:'⚠ Score élevé, surtout nutritionnel'};
   if (score <= 80)    return {cls:'bad',  txt:'Toxique',      sub:'⚠ Produit à éviter'};
   return                     {cls:'bad', txt:'Danger',       sub:'⛔ Substances à risque élevé'};
 }
-function showStamp(score){
-  const s = stampFor(score);
+function showStamp(score, hasHigh){
+  const s = stampFor(score, hasHigh);
   const el = $('#stamp');
   el.className = 'stamp';
   void el.offsetWidth;                 // relance l'animation
@@ -1517,10 +1523,11 @@ function showStamp(score){
   el.className = `stamp show ${s.cls}`;
 }
 
-function verdictFor(score){
+function verdictFor(score, hasHigh){
   if (score===null) return {label:'Données insuffisantes', color:'#94a3b8', text:'Ce produit n’a pas assez d’informations publiques pour être évalué.'};
   if (score<=30)  return {label:'Produit pur', color:'#22c55e', text:'Peu ou pas de substances préoccupantes. Un bon choix pour votre panier.'};
   if (score<=60)  return {label:'Consommation modérée', color:'#f59e0b', text:'Quelques additifs ou ingrédients à surveiller. Privilégiez des alternatives plus simples.'};
+  if (!isAvoid(score, hasHigh)) return {label:'À surveiller', color:'#f59e0b', text:'Score élevé surtout lié à la composition nutritionnelle et à la transformation. Vérifiez les détails avant d’acheter.'};
   return {label:'À éviter', color:'#ef4444', text:'Présence de plusieurs substances à risque ou d’un profil ultra-transformé.'};
 }
 
@@ -1598,7 +1605,7 @@ async function scanCode(code, catId){
   fillHead(p, code);
   const r = analyze(p);
   applyProfile(r);
-  const v = verdictFor(r.score);
+  const v = verdictFor(r.score, r.hasHigh);
 
   let badges = '';
   if (r.grade) badges += `<span class="badge"><span class="ns" style="background:${NUTRI_COLORS[r.grade]||'#64748b'}">${r.grade.toUpperCase()}</span>Nutri-Score</span>`;
@@ -1627,11 +1634,11 @@ async function scanCode(code, catId){
   const target = r.score ?? 0;
   const a0 = soundFill(2.3);
   runFill(target, 2300, ()=>{
-    showStamp(r.score);
-    showHazardAlert(r.list, r.score, r.breakdown);
+    showStamp(r.score, r.hasHigh);
+    showHazardAlert(r.list, r.score, r.breakdown, r.parts);
     soundVerdict(r.score);
     celebrate(r.score);
-    if (r.score !== null && r.score > 60) $('#roPanel').classList.add('alert');
+    if (isAvoid(r.score, r.hasHigh)) $('#roPanel').classList.add('alert');
   }, a0);
 }
 
@@ -1705,7 +1712,7 @@ function onProductRendered(p, r, code){
   lastResult = {
     code, name: p.product_name_fr || p.product_name || p.generic_name || 'Produit',
     brand: p.brands || '', img: p.image_front_small_url || p.image_front_url || '',
-    score: r.score, grade: r.grade || '', nova: r.nova || null,
+    score: r.score, hasHigh: r.hasHigh, grade: r.grade || '', nova: r.nova || null,
     list: r.list.map(h => ({n:h.n, s:h.s, code:h.code, personal:!!h.personal})),
     db: p._db, date: Date.now()
   };
@@ -1793,7 +1800,7 @@ function renderBasket(){
 function exportCSV(){
   if (!basket.length){ toast('Panier vide'); return; }
   const rows = [['EAN','Produit','Marque','Score (0-100)','Verdict','Nutri-Score','NOVA','Substances signalées'],
-    ...basket.map(b => [b.code, b.name, b.brand, b.score ?? '', verdictFor(b.score).label, (b.grade||'').toUpperCase(), b.nova || '', (b.hzNames||[]).join(' | ')])];
+    ...basket.map(b => [b.code, b.name, b.brand, b.score ?? '', verdictFor(b.score, b.hasHigh).label, (b.grade||'').toUpperCase(), b.nova || '', (b.hzNames||[]).join(' | ')])];
   const csv = '\uFEFF' + rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(';')).join('\r\n');
   const url = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8'}));
   const a = document.createElement('a');
@@ -1804,7 +1811,7 @@ function exportCSV(){
 }
 function shareResult(){
   if (!lastResult) return;
-  const txt = `${lastResult.name} — Panier Pur : ${lastResult.score ?? 'n.d.'}/100 (${verdictFor(lastResult.score).label}).`;
+  const txt = `${lastResult.name} — Panier Pur : ${lastResult.score ?? 'n.d.'}/100 (${verdictFor(lastResult.score, lastResult.hasHigh).label}).`;
   if (navigator.share) navigator.share({title:'Panier Pur', text:txt}).catch(()=>{});
   else if (navigator.clipboard) navigator.clipboard.writeText(txt).then(()=>toast('Résultat copié dans le presse-papiers')).catch(()=>toast(txt));
   else toast(txt);
@@ -2340,7 +2347,7 @@ async function storeCode(code){
   const item = {
     code, name: p.product_name_fr || p.product_name || p.generic_name || 'Produit',
     brand: p.brands || '', img: p.image_front_small_url || p.image_front_url || '',
-    score: r.score, grade: r.grade || '', nova: r.nova || null,
+    score: r.score, hasHigh: r.hasHigh, grade: r.grade || '', nova: r.nova || null,
     list: r.list.map(h => ({n:h.n, s:h.s, code:h.code, personal:!!h.personal})),
     db: p._db, date: now
   };
@@ -2350,10 +2357,10 @@ async function storeCode(code){
   showStoreCard(item);
 }
 function showStoreCard(item){
-  const v = verdictFor(item.score);
+  const v = verdictFor(item.score, item.hasHigh);
   const col = item.score === null ? '#94a3b8' : v.color;
   const top = item.list.filter(h => h.s !== 'low' || h.personal).slice(0,2).map(h => h.n).join(' · ');
-  const bad = item.score !== null && item.score > 60;
+  const bad = isAvoid(item.score, item.hasHigh);
   $('#stCard').innerHTML = `<div class="st-item${bad?' bad':''}" style="--c:${col}">
       ${item.img ? `<img src="${esc(item.img)}" alt="">` : '<div class="st-ph">📦</div>'}
       <div class="st-info">
@@ -2522,7 +2529,7 @@ function showCompare(a, b){
     return `<div class="cmp-col" style="border-color:${c}66">
         <b>${esc(o.name)}</b><small style="display:block;color:var(--muted)">${esc(o.brand || '')}</small>
         <div class="sc" style="color:${c}">${o.score === null ? '—' : o.score}</div>
-        <div style="font-weight:800;color:${c}">${verdictFor(o.score).label}</div>
+        <div style="font-weight:800;color:${c}">${verdictFor(o.score, o.hasHigh).label}</div>
         <ul>${items}</ul>
       </div>`;
   };
@@ -2575,7 +2582,7 @@ function shareCard(){
   x.fillText(L.score === null ? '—' : String(L.score), 330, 735);
   x.font = '500 40px sans-serif'; x.fillStyle = '#8fa99e'; x.fillText('/100', 330, 800);
   x.textAlign = 'left';
-  x.fillStyle = col; x.font = '900 64px sans-serif'; x.fillText(verdictFor(L.score).label, 600, 640);
+  x.fillStyle = col; x.font = '900 64px sans-serif'; x.fillText(verdictFor(L.score, L.hasHigh).label, 600, 640);
   x.fillStyle = '#e8f7f1'; x.font = '500 36px sans-serif';
   const hz = L.list.filter(h => h.s !== 'low').slice(0, 4);
   if (!hz.length) x.fillText('Aucun composant nocif majeur', 600, 710);
@@ -2601,7 +2608,7 @@ function shareCard(){
 /* --- Lecture vocale du résultat (accessibilité) --- */
 function speakResult(){
   if (!lastResult || !('speechSynthesis' in window)) { toast('Lecture vocale indisponible'); return; }
-  const v = verdictFor(lastResult.score);
+  const v = verdictFor(lastResult.score, lastResult.hasHigh);
   const top = lastResult.list.filter(h => h.s !== 'low').slice(0,3).map(h => h.n).join(', ');
   const txt = `${lastResult.name}. Score ${lastResult.score ?? 'inconnu'} sur 100. ${v.label}. ` +
     (top ? `Substances à surveiller : ${top}.` : 'Aucune substance préoccupante détectée.');
@@ -2746,20 +2753,27 @@ renderStores();
 setSound(LS.get('sound', true) !== false);
 
 /* --- V12 : bandeau des substances nocives, affiché au verdict --- */
-function showHazardAlert(list, score, breakdown){
+function driverText(parts){
+  if (!parts) return '';
+  const food = (parts.nutri || 0) + (parts.nova || 0), sub = parts.hz || 0;
+  if (!food && !sub) return 'Aucun facteur de risque retenu.';
+  if (sub >= food) return `Le score vient surtout des substances signalées (+${sub} pts).`;
+  return `Le score vient surtout de la composition nutritionnelle et de la transformation (+${food} pts). Les substances signalées ajoutent +${sub} pt${sub>1?'s':''}.`;
+}
+function showHazardAlert(list, score, breakdown, parts){
   const box = $('#hzAlert');
   if (!box) return;
   if (!list || !list.length){ box.style.display = 'none'; box.innerHTML = ''; return; }
   const ordered = ['high','medium','low'].flatMap(s => list.filter(h => h.s === s));
-  const crit = score !== null && score > 60;
+  const crit = isAvoid(score, list.some(h => h.s === 'high'));
   const hi = list.filter(h => h.s === 'high').length;
   box.className = 'hz-alert ' + (crit ? 'crit' : 'warn');
   box.innerHTML = `
     <div class="hz-alert-h">
       <span class="hz-alert-ic">${ICON_WARN}</span>
       <div>
-        <b>${crit ? '⛔ Produit nocif' : '⚠ À surveiller'} : ${list.length} substance${list.length>1?'s':''} signalée${list.length>1?'s':''}</b>
-        <small>${hi ? hi + ' substance' + (hi>1?'s':'') + ' à risque élevé. ' : ''}${crit ? 'Ces composants pèsent fortement dans le score.' : 'Ces composants demandent de la vigilance.'}</small>
+        <b>${crit ? '⛔ Produit à éviter' : '⚠ Produit à surveiller'} · ${score ?? '—'}/100</b>
+        <small>${driverText(parts)}</small>
       </div>
     </div>
     <div class="hz-alert-list">${ordered.slice(0,8).map(h => `<span class="hz-chip sev-${h.s}">${esc(h.n)}<em>${SEV_LABEL[h.s]}</em></span>`).join('')}</div>
@@ -2783,5 +2797,5 @@ function setJacques(score){
   box.style.display = 'flex';
 }
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a48dd36c192ac752',t:'MTc5MTcyMTI5OQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a48de3ff7c73f4ff',t:'MTc5MTcyMTk3OA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
