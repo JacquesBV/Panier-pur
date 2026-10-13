@@ -959,6 +959,39 @@ background:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg
 @media (max-width:420px){ header .nav{height:auto;min-height:72px;padding:8px 0} header .nav .brand{flex-direction:column;align-items:flex-start;gap:2px} header .nav .brand svg{width:32px;height:32px} header .nav .brand span{display:block;font-size:.78rem;line-height:1.1} }
   /* v55 — pas de doublon de solde dans la boutique (la bulle affiche déjà le solde) */
 body:has(#tab-shop.on) .dr-solde{display:none}
+  /* v59 — mots croisés santé */
+.cw-card{display:flex;gap:16px;align-items:center;flex-wrap:wrap;padding:18px;border-radius:18px;background:var(--card);border:1px solid rgba(var(--mint-rgb),.25)}
+.cw-card .cw-ico{font-size:2.4rem;line-height:1}
+.cw-card h2{margin:0 0 4px;font-size:1.3rem}
+.cw-card p{margin:0;color:var(--muted)}
+.cw-hs{display:block;margin-top:6px;color:var(--btn-a);font-weight:700}
+.cw-card .btn{margin-left:auto}
+.cw-ov{position:fixed;inset:0;z-index:900;background:rgba(2,10,8,.84);backdrop-filter:blur(6px);overflow-y:auto;padding:14px}
+.cw-box{max-width:620px;margin:0 auto;background:linear-gradient(180deg,#0b2a22,#06170f);border:1px solid rgba(var(--mint-rgb),.35);border-radius:20px;padding:16px;color:#ecfdf5;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+.cw-top{display:flex;justify-content:space-between;align-items:center;font-size:1.1rem;margin-bottom:10px}
+.cw-x{background:none;border:0;color:#ecfdf5;font-size:1.8rem;line-height:1;cursor:pointer;padding:0 6px}
+.cw-levels{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.cw-chip{border:1px solid rgba(var(--mint-rgb),.4);background:rgba(255,255,255,.05);color:#ecfdf5;border-radius:999px;padding:6px 12px;font-size:.85rem;font-weight:700;cursor:pointer}
+.cw-chip.cur{background:rgba(var(--mint-rgb),.25);border-color:var(--btn-a)}
+.cw-chip.done{color:var(--btn-a)}
+.cw-chip.lock{opacity:.45;cursor:not-allowed}
+.cw-grid{display:grid;grid-template-columns:repeat(var(--cols),minmax(0,1fr));gap:2px;width:100%;max-width:460px;margin:8px auto}
+.cw-blk{aspect-ratio:1;background:transparent}
+.cw-cell{position:relative;aspect-ratio:1;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);border-radius:4px}
+.cw-cell.act{background:rgba(var(--mint-rgb),.22);border-color:rgba(var(--mint-rgb),.6)}
+.cw-cell.ok{background:rgba(16,185,129,.25)}
+.cw-cell.bad{background:rgba(248,113,113,.25);border-color:#f87171}
+.cw-num{position:absolute;top:1px;left:3px;font-size:9px;color:var(--muted);pointer-events:none;line-height:1}
+.cw-cell input{width:100%;height:100%;background:transparent;border:0;outline:none;text-align:center;font-weight:800;font-size:16px;color:#ecfdf5;text-transform:uppercase;padding:0;caret-color:var(--btn-a);font-family:inherit}
+.cw-msg{min-height:1.4em;text-align:center;margin:8px 0;color:var(--btn-a);font-weight:700}
+.cw-actions{display:flex;gap:8px;justify-content:center;margin-bottom:12px}
+.cw-clues{display:grid;grid-template-columns:1fr;gap:10px;font-size:.9rem}
+.cw-clues h4{margin:4px 0;color:var(--btn-a)}
+.cw-clues ul{list-style:none;padding:0;margin:0}
+.cw-cl{padding:6px 8px;border-radius:8px;cursor:pointer;line-height:1.35}
+.cw-cl:hover{background:rgba(255,255,255,.05)}
+.cw-cl.act{background:rgba(var(--mint-rgb),.2)}
+@media (min-width:560px){ .cw-clues{grid-template-columns:1fr 1fr} }
 </style>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#06120e">
@@ -1054,6 +1087,14 @@ body:has(#tab-shop.on) .dr-solde{display:none}
       <span>Additifs</span><span>Colorants</span><span>Perturbateurs endocriniens</span><span>Parabènes</span><span>Nitrites</span><span>Conservateurs</span><span>Microplastiques</span><span>Nutri-Score</span><span>NOVA</span>
       <span>Additifs</span><span>Colorants</span><span>Perturbateurs endocriniens</span><span>Parabènes</span><span>Nitrites</span><span>Conservateurs</span><span>Microplastiques</span><span>Nutri-Score</span><span>NOVA</span>
     </div>
+  </div>
+</section>
+
+<section id="mots" class="wrap" style="padding-top:30px">
+  <div class="cw-card">
+    <div class="cw-ico" aria-hidden="true">🧩</div>
+    <div><h2>Mots croisés santé</h2><p>Remplissez les grilles sur l’alimentation et gagnez des pièces. 5 niveaux, de 20 à 40 🪙 chacun.</p><small id="cwHomeStatus" class="cw-hs">0 / 5 niveaux terminés</small></div>
+    <button class="btn" onclick="openCrossword()">Jouer</button>
   </div>
 </section>
 
@@ -2458,6 +2499,196 @@ const COIN = {
   },
   save(c){ LS.set('coins', c); renderCoins(); updateSolde(); }
 };
+/* v59 — mots croisés santé : 5 niveaux, récompense en pièces (une fois par niveau) */
+const CW_LEVELS = [{"n": 1, "reward": 20, "rows": 7, "cols": 8, "cells": ["T###L###", "OMEGA###", "F###I#P#", "U###THON", "######M#", "######M#", "#####FER"], "words": [{"num": 1, "dir": "D", "r": 0, "c": 0, "len": 4, "answer": "TOFU", "clue": "Caillé de soja, source de protéines végétales"}, {"num": 2, "dir": "D", "r": 0, "c": 4, "len": 4, "answer": "LAIT", "clue": "Boisson blanche, animale ou végétale"}, {"num": 3, "dir": "A", "r": 1, "c": 0, "len": 5, "answer": "OMEGA", "clue": "Famille d’acides gras présente dans les poissons gras"}, {"num": 4, "dir": "D", "r": 2, "c": 6, "len": 5, "answer": "POMME", "clue": "Fruit croquant, souvent cueilli à l’automne"}, {"num": 5, "dir": "A", "r": 3, "c": 4, "len": 4, "answer": "THON", "clue": "Poisson riche en protéines, souvent vendu en boîte"}, {"num": 6, "dir": "A", "r": 6, "c": 5, "len": 3, "answer": "FER", "clue": "Minéral transporté par l’hémoglobine du sang"}]}, {"n": 2, "reward": 25, "rows": 10, "cols": 10, "cells": ["CALCIUM###", "#V########", "POISSON#C#", "#C####O#A#", "#A###FIBRE", "#T####S#O#", "######E#T#", "#YAOURT#T#", "######T#E#", "#AVOINE###"], "words": [{"num": 1, "dir": "A", "r": 0, "c": 0, "len": 7, "answer": "CALCIUM", "clue": "Minéral des os et des dents"}, {"num": 2, "dir": "D", "r": 0, "c": 1, "len": 6, "answer": "AVOCAT", "clue": "Fruit à la chair beurrée, riche en bonnes graisses"}, {"num": 3, "dir": "A", "r": 2, "c": 0, "len": 7, "answer": "POISSON", "clue": "Aliment riche en protéines, parfois riche en oméga-3"}, {"num": 4, "dir": "D", "r": 2, "c": 6, "len": 8, "answer": "NOISETTE", "clue": "Fruit à coque rond et brun"}, {"num": 5, "dir": "D", "r": 2, "c": 8, "len": 7, "answer": "CAROTTE", "clue": "Légume orange riche en bêta-carotène"}, {"num": 6, "dir": "A", "r": 4, "c": 5, "len": 5, "answer": "FIBRE", "clue": "Glucide non digéré, utile au transit"}, {"num": 7, "dir": "A", "r": 7, "c": 1, "len": 6, "answer": "YAOURT", "clue": "Produit laitier fermenté"}, {"num": 8, "dir": "A", "r": 9, "c": 1, "len": 6, "answer": "AVOINE", "clue": "Céréale des flocons du petit-déjeuner"}]}, {"n": 3, "reward": 30, "rows": 12, "cols": 12, "cells": ["######M#####", "#VITAMINE##P", "######N####R", "GLUCIDES###O", "#E####R##L#T", "#G###SARDINE", "#U##Q#L##P#I", "#M##U####I#N", "LENTILLE#D#E", "####N####E##", "####O####S##", "EPINARD#####"], "words": [{"num": 1, "dir": "D", "r": 0, "c": 6, "len": 7, "answer": "MINERAL", "clue": "Élément comme le calcium ou le fer"}, {"num": 2, "dir": "A", "r": 1, "c": 1, "len": 8, "answer": "VITAMINE", "clue": "Micronutriment indispensable en petites quantités"}, {"num": 3, "dir": "D", "r": 1, "c": 11, "len": 8, "answer": "PROTEINE", "clue": "Nutriment qui construit les muscles"}, {"num": 4, "dir": "A", "r": 3, "c": 0, "len": 8, "answer": "GLUCIDES", "clue": "Principale source d’énergie de l’alimentation"}, {"num": 5, "dir": "D", "r": 3, "c": 1, "len": 6, "answer": "LEGUME", "clue": "Produit du potager, comme la courgette"}, {"num": 6, "dir": "D", "r": 4, "c": 9, "len": 7, "answer": "LIPIDES", "clue": "Autre nom des graisses"}, {"num": 7, "dir": "A", "r": 5, "c": 5, "len": 7, "answer": "SARDINE", "clue": "Petit poisson gras, souvent en conserve"}, {"num": 8, "dir": "D", "r": 6, "c": 4, "len": 6, "answer": "QUINOA", "clue": "Pseudo-céréale originaire des Andes"}, {"num": 9, "dir": "A", "r": 8, "c": 0, "len": 8, "answer": "LENTILLE", "clue": "Petite légumineuse très riche en fibres"}, {"num": 10, "dir": "A", "r": 11, "c": 0, "len": 7, "answer": "EPINARD", "clue": "Légume-feuille vert, riche en fer et en folates"}]}, {"n": 4, "reward": 35, "rows": 14, "cols": 11, "cells": ["######M#H##", "#H#SOJA#U##", "#A#E##G#I#C", "FRUIT#N#L#E", "#I#G#FEVE#R", "#C#L##S###E", "#O#E#RIZ##A", "#T####U#E#L", "#####AMANDE", "########E##", "########R##", "########G##", "##SARRASIN#", "########E##"], "words": [{"num": 1, "dir": "D", "r": 0, "c": 6, "len": 9, "answer": "MAGNESIUM", "clue": "Minéral présent dans les céréales complètes"}, {"num": 2, "dir": "D", "r": 0, "c": 8, "len": 5, "answer": "HUILE", "clue": "Matière grasse liquide, comme l’huile d’olive"}, {"num": 3, "dir": "D", "r": 1, "c": 1, "len": 7, "answer": "HARICOT", "clue": "Légumineuse à cuisson longue, comme le haricot rouge"}, {"num": 4, "dir": "A", "r": 1, "c": 3, "len": 4, "answer": "SOJA", "clue": "Légumineuse à l’origine du tofu"}, {"num": 4, "dir": "D", "r": 1, "c": 3, "len": 6, "answer": "SEIGLE", "clue": "Céréale proche du blé, utilisée dans le pain noir"}, {"num": 5, "dir": "D", "r": 2, "c": 10, "len": 7, "answer": "CEREALE", "clue": "Grain comme le blé, l’avoine ou le riz"}, {"num": 6, "dir": "A", "r": 3, "c": 0, "len": 5, "answer": "FRUIT", "clue": "Produit sucré issu de la plante, comme la pomme"}, {"num": 7, "dir": "A", "r": 4, "c": 5, "len": 4, "answer": "FEVE", "clue": "Légumineuse verte, à écosser"}, {"num": 8, "dir": "A", "r": 6, "c": 5, "len": 3, "answer": "RIZ", "clue": "Céréale souvent servie en accompagnement"}, {"num": 9, "dir": "D", "r": 7, "c": 8, "len": 7, "answer": "ENERGIE", "clue": "Ce que fournit l’alimentation pour bouger"}, {"num": 10, "dir": "A", "r": 8, "c": 5, "len": 6, "answer": "AMANDE", "clue": "Fruit à coque riche en vitamine E"}, {"num": 11, "dir": "A", "r": 12, "c": 2, "len": 8, "answer": "SARRASIN", "clue": "Pseudo-céréale naturellement sans gluten"}]}, {"n": 5, "reward": 40, "rows": 15, "cols": 13, "cells": ["######V######", "######I######", "####POTASSIUM", "######A######", "#NUTRIMENT###", "######I######", "######N#SUCRE", "##SATIETE###T", "###P##C#L#A#I", "###P######D#Q", "DIGESTION#D#U", "###T######I#E", "ANTIOXYDANT#T", "###T######I#T", "##########F#E"], "words": [{"num": 1, "dir": "D", "r": 0, "c": 6, "len": 9, "answer": "VITAMINEC", "clue": "Vitamine présente dans les agrumes et le kiwi"}, {"num": 2, "dir": "A", "r": 2, "c": 4, "len": 9, "answer": "POTASSIUM", "clue": "Minéral important pour les muscles et le cœur"}, {"num": 3, "dir": "A", "r": 4, "c": 1, "len": 9, "answer": "NUTRIMENT", "clue": "Substance que l’organisme tire des aliments"}, {"num": 4, "dir": "A", "r": 6, "c": 8, "len": 5, "answer": "SUCRE", "clue": "Glucide simple, à consommer avec modération"}, {"num": 4, "dir": "D", "r": 6, "c": 8, "len": 3, "answer": "SEL", "clue": "Assaisonnement à limiter pour protéger la tension"}, {"num": 5, "dir": "D", "r": 6, "c": 12, "len": 9, "answer": "ETIQUETTE", "clue": "Ce qui figure sur un emballage"}, {"num": 6, "dir": "A", "r": 7, "c": 2, "len": 7, "answer": "SATIETE", "clue": "Sensation d’être rassasié"}, {"num": 7, "dir": "D", "r": 7, "c": 3, "len": 7, "answer": "APPETIT", "clue": "Envie de manger"}, {"num": 8, "dir": "D", "r": 8, "c": 10, "len": 7, "answer": "ADDITIF", "clue": "Substance ajoutée à un aliment pour une fonction technique"}, {"num": 9, "dir": "A", "r": 10, "c": 0, "len": 9, "answer": "DIGESTION", "clue": "Transformation des aliments dans le tube digestif"}, {"num": 10, "dir": "A", "r": 12, "c": 0, "len": 11, "answer": "ANTIOXYDANT", "clue": "Substance qui protège les cellules du stress oxydatif"}]}];
+let CW = null;
+function cwData(){ const c = COIN.get(); c.cw = c.cw || {}; c.cw.done = c.cw.done || {}; c.cw.prog = c.cw.prog || {}; return c; }
+function cwLevel(n){ return CW_LEVELS.find(l => l.n === n); }
+function cwDoneCount(){ const d = cwData().cw.done; return CW_LEVELS.filter(l => d[l.n]).length; }
+function renderCwHome(){ const el = document.getElementById('cwHomeStatus'); if (el) el.textContent = `${cwDoneCount()} / ${CW_LEVELS.length} niveaux terminés`; }
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', renderCwHome); else renderCwHome();
+function cwNorm(s){ return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z]/g, ''); }
+function cwChip(l, done){
+  const unlocked = l.n === 1 || done[l.n - 1];
+  const cls = done[l.n] ? 'done' : (unlocked ? '' : 'lock');
+  const label = done[l.n] ? '✓ ' : (unlocked ? '' : '🔒 ');
+  return `<button class="cw-chip ${cls}" ${unlocked ? '' : 'disabled'} data-n="${l.n}" onclick="cwLoad(${l.n})">${label}Niveau ${l.n} · ${l.reward} 🪙</button>`;
+}
+function cwRenderChips(){
+  const box = document.querySelector('#cwOv .cw-levels'); if (!box) return;
+  const done = cwData().cw.done;
+  box.innerHTML = CW_LEVELS.map(l => cwChip(l, done)).join('');
+  if (CW) box.querySelectorAll('.cw-chip').forEach(b => b.classList.toggle('cur', +b.dataset.n === CW.lvl.n));
+}
+function cwMsg(t){ const m = document.getElementById('cwMsg'); if (m) m.textContent = t || ''; }
+function openCrossword(n){
+  closeCrossword(true);
+  const done = cwData().cw.done;
+  const start = n || (CW_LEVELS.find(l => !done[l.n]) || CW_LEVELS[0]).n;
+  const ov = document.createElement('div');
+  ov.id = 'cwOv'; ov.className = 'cw-ov';
+  ov.innerHTML = `<div class="cw-box" role="dialog" aria-modal="true" aria-label="Mots croisés santé">
+    <div class="cw-top"><b>🧩 Mots croisés santé</b><button class="cw-x" aria-label="Fermer" onclick="closeCrossword()">×</button></div>
+    <div class="cw-levels"></div>
+    <div id="cwBoard" class="cw-board"></div>
+    <div id="cwMsg" class="cw-msg" aria-live="polite"></div>
+    <div class="cw-actions"><button class="btn ghost" onclick="cwCheck()">Vérifier</button><button class="btn ghost" onclick="cwClear()">Effacer</button></div>
+    <div id="cwClues" class="cw-clues"></div>
+  </div>`;
+  document.body.appendChild(ov);
+  document.body.style.overflow = 'hidden';
+  ov.addEventListener('click', e => { if (e.target === ov) closeCrossword(); });
+  const board = ov.querySelector('#cwBoard');
+  board.addEventListener('input', cwOnInput);
+  board.addEventListener('keydown', cwOnKey);
+  board.addEventListener('focusin', cwOnFocus);
+  document.addEventListener('keydown', cwEsc);
+  cwLoad(start);
+}
+function closeCrossword(silent){
+  const ov = document.getElementById('cwOv');
+  if (ov) ov.remove();
+  document.body.style.overflow = '';
+  document.removeEventListener('keydown', cwEsc);
+  CW = null;
+  renderCwHome();
+}
+function cwEsc(e){ if (e.key === 'Escape') closeCrossword(); }
+function cwLoad(n){
+  const lvl = cwLevel(n); if (!lvl) return;
+  const c = cwData(), done = c.cw.done;
+  if (!(n === 1 || done[n - 1])){ cwMsg(`Terminez le niveau ${n - 1} pour débloquer celui-ci.`); return; }
+  const map = {};
+  lvl.words.forEach((w, i) => { for (let k = 0; k < w.len; k++){ const r = w.r + (w.dir === 'D' ? k : 0), col = w.c + (w.dir === 'A' ? k : 0); (map[r + ',' + col] = map[r + ',' + col] || []).push(i); } });
+  CW = { lvl, map, dir: 'A', act: null };
+  const numAt = {}; lvl.words.forEach(w => { numAt[w.r + ',' + w.c] = w.num; });
+  const prog = c.cw.prog[n] || {};
+  let html = `<div class="cw-grid" style="--cols:${lvl.cols}">`;
+  for (let r = 0; r < lvl.rows; r++) for (let col = 0; col < lvl.cols; col++){
+    if (lvl.cells[r][col] === '#'){ html += '<div class="cw-blk"></div>'; continue; }
+    const key = r + ',' + col, num = numAt[key];
+    html += `<div class="cw-cell">${num ? `<span class="cw-num">${num}</span>` : ''}<input maxlength="1" data-r="${r}" data-c="${col}" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Ligne ${r + 1}, colonne ${col + 1}" value="${esc(prog[key] || '')}"></div>`;
+  }
+  html += '</div>';
+  document.getElementById('cwBoard').innerHTML = html;
+  const li = (w, i) => `<li class="cw-cl" data-i="${i}" onclick="cwPick(${i})"><b>${w.num}.</b> ${esc(w.clue)} <small>(${w.len})</small></li>`;
+  const across = lvl.words.map((w, i) => [w, i]).filter(x => x[0].dir === 'A');
+  const down = lvl.words.map((w, i) => [w, i]).filter(x => x[0].dir === 'D');
+  document.getElementById('cwClues').innerHTML =
+    `<div><h4>Horizontal</h4><ul>${across.map(x => li(x[0], x[1])).join('')}</ul></div>` +
+    `<div><h4>Vertical</h4><ul>${down.map(x => li(x[0], x[1])).join('')}</ul></div>`;
+  cwRenderChips();
+  const msgDone = done[n] ? 'Niveau déjà récompensé. Vous pouvez le refaire pour le plaisir.' : 'Cliquez une case ou une définition pour commencer.';
+  cwMsg(msgDone);
+  cwHighlight();
+}
+function cwCell(r, c){ return document.querySelector(`#cwBoard input[data-r="${r}"][data-c="${c}"]`); }
+function cwActiveIndex(key){
+  const list = CW.map[key] || [];
+  return list.find(i => CW.lvl.words[i].dir === CW.dir) ?? list[0] ?? null;
+}
+function cwHighlight(){
+  document.querySelectorAll('#cwBoard .cw-cell').forEach(el => el.classList.remove('act'));
+  document.querySelectorAll('#cwClues .cw-cl').forEach(el => el.classList.remove('act'));
+  if (CW.act === null || CW.act === undefined) return;
+  const w = CW.lvl.words[CW.act];
+  for (let k = 0; k < w.len; k++){
+    const r = w.r + (w.dir === 'D' ? k : 0), c = w.c + (w.dir === 'A' ? k : 0);
+    const inp = cwCell(r, c); if (inp) inp.parentElement.classList.add('act');
+  }
+  const cl = document.querySelector(`#cwClues .cw-cl[data-i="${CW.act}"]`);
+  if (cl) cl.classList.add('act');
+}
+function cwOnFocus(e){
+  const inp = e.target; if (!inp.matches || !inp.matches('input')) return;
+  const key = inp.dataset.r + ',' + inp.dataset.c;
+  const cur = (CW.map[key] || []).find(i => CW.lvl.words[i].dir === CW.dir);
+  if (cur === undefined){ const any = (CW.map[key] || [])[0]; if (any !== undefined) CW.dir = CW.lvl.words[any].dir; }
+  CW.act = cwActiveIndex(key);
+  cwHighlight();
+}
+function cwPick(i){
+  const w = CW.lvl.words[i];
+  CW.dir = w.dir; CW.act = i;
+  for (let k = 0; k < w.len; k++){
+    const r = w.r + (w.dir === 'D' ? k : 0), c = w.c + (w.dir === 'A' ? k : 0);
+    const inp = cwCell(r, c);
+    if (inp && !inp.value){ inp.focus(); cwHighlight(); return; }
+  }
+  const first = cwCell(w.r, w.c); if (first) first.focus();
+  cwHighlight();
+}
+function cwStep(inp, delta){
+  if (CW.act === null || CW.act === undefined) return null;
+  const w = CW.lvl.words[CW.act];
+  const r0 = +inp.dataset.r, c0 = +inp.dataset.c;
+  const k = w.dir === 'A' ? c0 - w.c : r0 - w.r;
+  const nk = k + delta;
+  if (nk < 0 || nk >= w.len) return null;
+  const r = w.r + (w.dir === 'D' ? nk : 0), c = w.c + (w.dir === 'A' ? nk : 0);
+  const t = cwCell(r, c); if (t) t.focus();
+  return t;
+}
+function cwSave(){
+  const obj = {};
+  document.querySelectorAll('#cwBoard input').forEach(i => { if (i.value) obj[i.dataset.r + ',' + i.dataset.c] = i.value; });
+  const c = cwData(); c.cw.prog[CW.lvl.n] = obj; LS.set('coins', c);
+}
+function cwOnInput(e){
+  const inp = e.target; if (!inp.matches || !inp.matches('input')) return;
+  const v = cwNorm(inp.value).slice(-1);
+  inp.value = v;
+  inp.parentElement.classList.remove('ok', 'bad');
+  cwSave();
+  if (v) cwStep(inp, +1);
+  cwWinCheck();
+}
+function cwOnKey(e){
+  const inp = e.target; if (!inp.matches || !inp.matches('input')) return;
+  const r = +inp.dataset.r, c = +inp.dataset.c;
+  const dirs = { ArrowRight: [0, 1, 'A'], ArrowLeft: [0, -1, 'A'], ArrowDown: [1, 0, 'D'], ArrowUp: [-1, 0, 'D'] };
+  if (e.key === 'Backspace' && !inp.value){
+    e.preventDefault();
+    const prev = cwStep(inp, -1);
+    if (prev){ prev.value = ''; prev.parentElement.classList.remove('ok', 'bad'); cwSave(); }
+  } else if (dirs[e.key]){
+    e.preventDefault();
+    const [dr, dc, d] = dirs[e.key];
+    CW.dir = d;
+    const t = cwCell(r + dr, c + dc);
+    if (t) t.focus();
+  }
+}
+function cwCheck(){
+  let wrong = 0, empty = 0, right = 0;
+  document.querySelectorAll('#cwBoard input').forEach(i => {
+    const cell = i.parentElement; cell.classList.remove('ok', 'bad');
+    const want = CW.lvl.cells[+i.dataset.r][+i.dataset.c];
+    if (!i.value){ empty++; return; }
+    if (i.value === want){ cell.classList.add('ok'); right++; } else { cell.classList.add('bad'); wrong++; }
+  });
+  if (wrong === 0 && empty === 0){ cwWinCheck(); return; }
+  cwMsg(wrong ? `${wrong} lettre${wrong > 1 ? 's' : ''} à corriger (en rouge).` : `${empty} case${empty > 1 ? 's' : ''} encore vide${empty > 1 ? 's' : ''}.`);
+}
+function cwClear(){
+  document.querySelectorAll('#cwBoard input').forEach(i => { i.value = ''; i.parentElement.classList.remove('ok', 'bad'); });
+  cwSave(); cwMsg('Grille effacée.');
+}
+function cwWinCheck(){
+  const inputs = [...document.querySelectorAll('#cwBoard input')];
+  if (!inputs.length || !inputs.every(i => i.value === CW.lvl.cells[+i.dataset.r][+i.dataset.c])) return false;
+  const lvl = CW.lvl, c = cwData();
+  if (c.cw.done[lvl.n]){ cwMsg('Grille juste. Ce niveau a déjà été récompensé.'); return true; }
+  c.cw.done[lvl.n] = true; c.balance += lvl.reward; COIN.save(c);
+  sfx('coin');
+  const next = CW_LEVELS.find(l => l.n === lvl.n + 1);
+  cwMsg(`Bravo ! +${lvl.reward} 🪙` + (next ? ` Le niveau ${next.n} est débloqué.` : ' Vous avez terminé tous les niveaux !'));
+  toast(`+${lvl.reward} 🪙 mots croisés niveau ${lvl.n}`);
+  cwRenderChips();
+  renderCwHome();
+  return true;
+}
+
 function awardPure(code, score){
   if (score === null || score > 30 || !code) return;
   const c = COIN.get(); if (c.seen[code]) return;     // une récompense par produit
@@ -4783,5 +5014,5 @@ function setJacques(score){
 }
 </script>
 <script>updateSolde(); document.addEventListener('DOMContentLoaded', updateSolde);</script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4a205e51d6fd085',t:'MTc5MTkzMzA4Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</body>
 </html>
