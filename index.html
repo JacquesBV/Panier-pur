@@ -1055,8 +1055,10 @@
       <div class="msg" id="camMsg">Initialisation de la caméra…</div>
     </div>
     <div style="padding:0 0 10px;text-align:center">
-      <button class="btn ghost" style="padding:10px 16px" onclick="$('#photoIn').click()">📷 Prendre une photo du code-barre</button>
+      <button class="btn ghost" style="padding:10px 16px" onclick="$('#photoIn').click()">📷 Photo du code-barre</button>
+      <button class="btn ghost" style="padding:10px 16px;margin-left:6px" onclick="recognizeByPhoto()">🔎 Reconnaître le produit</button>
       <input type="file" id="photoIn" accept="image/*" capture="environment" hidden="" onchange="scanPhoto(this)">
+      <div id="photoPick" style="text-align:left;margin-top:10px"></div>
     </div>
     <div class="field">
       <input id="modalCode" inputmode="numeric" placeholder="…ou saisissez le code manuellement" maxlength="18">
@@ -1204,10 +1206,15 @@
    1. CATÉGORIES & BASES DE DONNÉES
    ========================================================= */
 const DB = {
-  off:  'https://world.openfoodfacts.org/api/v2/product/',
-  obf:  'https://world.openbeautyfacts.org/api/v2/product/',
-  opf:  'https://world.openproductsfacts.org/api/v2/product/'
+  off:   'https://world.openfoodfacts.org/api/v2/product/',
+  offfr: 'https://fr.openfoodfacts.org/api/v2/product/',
+  obf:   'https://world.openbeautyfacts.org/api/v2/product/',
+  opf:   'https://world.openproductsfacts.org/api/v2/product/',
+  opff:  'https://world.openpetfoodfacts.org/api/v2/product/'
 };
+const DB_NAME = {off:'Open Food Facts', offfr:'Open Food Facts', obf:'Open Beauty Facts', opf:'Open Products Facts', opff:'Open Pet Food Facts', sample:'Exemple'};
+/* v23 — interrogation parallèle de toutes les bases Open Facts ; le produit principal est complété par les autres bases */
+const MERGE_KEYS = ['product_name','product_name_fr','generic_name','brands','quantity','categories','categories_tags','ingredients_text','ingredients_text_fr','ingredients_text_en','nutriscore_grade','nova_group','nutriments','additives_tags','additives_original_tags','labels_tags','allergens_tags','image_front_small_url','image_front_url','ecoscore_grade','origins','countries_tags'];
 
 
 /* =========================================================
@@ -1465,6 +1472,162 @@ async function scanPhoto(input){
     msg.innerHTML = 'Code non lu sur cette photo.<br/><small>Reprenez-la plus près, bien éclairée et nette, ou saisissez le numéro ci-dessous.</small>';
   }
 }
+/* v20 — reconnaissance du produit sans code-barre : OCR du nom/marque, recherche, choix */
+const NAME_STOP = new Set(['les','des','avec','sans','pour','dans','aux','une','par','net','poids','produit','boisson','gazeuse','saveur','original','ingredients','ingrédients','composition','conserver','fabrique','France','made','with','from','the','and','bouteille','litre','cl','ml','emballage','recyclable','contient']);
+function nameCandidates(text){
+  const words = String(text||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().match(/[a-z][a-z\-]{3,}/g) || [];
+  const count = {};
+  words.forEach(w => { if (!NAME_STOP.has(w)) count[w] = (count[w]||0) + 1; });
+  return Object.entries(count).sort((a,b) => b[1]-a[1] || b[0].length-a[0].length).slice(0,6).map(e => e[0]);
+}
+/* v21 — reconnaissance multi-bases : Open Food / Beauty / Products Facts + Wikidata (indices de marque) */
+const REC_DBS = [
+  {key:'off', name:'Open Food Facts',     bases:['https://world.openfoodfacts.org','https://fr.openfoodfacts.org']},
+  {key:'obf', name:'Open Beauty Facts',   bases:['https://world.openbeautyfacts.org']},
+  {key:'opf', name:'Open Products Facts', bases:['https://world.openproductsfacts.org']}
+];
+const REC_FIELDS = 'code,product_name,product_name_fr,brands,quantity,categories,image_front_small_url';
+const fold = s => String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+function normQty(q){ const m = fold(q).replace(/\s/g,'').replace(',', '.').match(/(\d+(?:\.\d+)?)(cl|ml|l|g|kg)\b/); return m ? m[1]+m[2] : ''; }
+async function recSearch(db, q){            // null = base indisponible sur tous ses serveurs
+  for (let i = 0; i < 3; i++){               // 3 essais, attente croissante (503 fréquents)
+    for (const base of db.bases){
+      const url = `${base}/cgi/search.pl?search_simple=1&action=process&json=1&page_size=12&fields=${REC_FIELDS}&search_terms=${encodeURIComponent(q)}`;
+      try{
+        const r = await fetch(url);
+        if (r.ok){ const j = await r.json(); return (j.products||[]).filter(x => x.code && (x.product_name || x.product_name_fr)).map(x => ({...x, _db: db})); }
+      }catch(e){}
+    }
+    await new Promise(res => setTimeout(res, 1500 * (i + 1)));
+  }
+  return null;
+}
+async function wikiHints(q){
+  try{
+    const r = await fetch(`https://www.wikidata.org/w/api.php?action=wbsearchentities&search=${encodeURIComponent(q)}&language=fr&format=json&origin=*&limit=5`);
+    const j = await r.json();
+    return (j.search||[]).map(e => fold((e.label||'') + ' ' + (e.description||'')));
+  }catch(e){ return []; }
+}
+function frameBlob(v){
+  return new Promise(res => { const c = document.createElement('canvas'); c.width = v.videoWidth; c.height = v.videoHeight; c.getContext('2d').drawImage(v, 0, 0); c.toBlob(b => res(b), 'image/png'); });
+}
+/* v22 — comparaison visuelle (couleurs + dHash) avec les photos des produits, et partage vers Google Lens */
+let lastRecFile = null;
+function fileToBitmap(file){
+  if (window.createImageBitmap) return createImageBitmap(file);
+  return new Promise((res, rej) => { const u = URL.createObjectURL(file); const im = new Image(); im.onload = () => { URL.revokeObjectURL(u); res(im); }; im.onerror = rej; im.src = u; });
+}
+function loadImg(src){
+  return new Promise((res, rej) => { const im = new Image(); im.crossOrigin = 'anonymous'; im.onload = () => res(im); im.onerror = rej; im.src = src; });
+}
+function visualFeat(src){
+  const c = document.createElement('canvas'); c.width = 32; c.height = 32;
+  const x = c.getContext('2d'); x.drawImage(src, 0, 0, 32, 32);
+  const d = x.getImageData(0, 0, 32, 32).data;
+  const h = new Float32Array(64);                       // histogramme couleur 4x4x4
+  for (let i = 0; i < d.length; i += 4) h[((d[i] >> 6) << 4) | ((d[i+1] >> 6) << 2) | (d[i+2] >> 6)]++;
+  const n = 32 * 32; for (let i = 0; i < 64; i++) h[i] /= n;
+  const g = document.createElement('canvas'); g.width = 9; g.height = 8;
+  const gx = g.getContext('2d'); gx.drawImage(src, 0, 0, 9, 8);
+  const gd = gx.getImageData(0, 0, 9, 8).data, bits = [];   // dHash 64 bits
+  for (let y = 0; y < 8; y++) for (let xx = 0; xx < 8; xx++){
+    const i1 = (y*9+xx)*4, i2 = (y*9+xx+1)*4;
+    bits.push((gd[i1]+gd[i1+1]+gd[i1+2]) > (gd[i2]+gd[i2+1]+gd[i2+2]) ? 1 : 0);
+  }
+  return {h, bits};
+}
+function visualSim(A, B){
+  let inter = 0; for (let i = 0; i < 64; i++) inter += Math.min(A.h[i], B.h[i]);
+  let diff = 0; for (let i = 0; i < 64; i++) if (A.bits[i] !== B.bits[i]) diff++;
+  return 0.6 * inter + 0.4 * (1 - diff / 64);          // 0..1
+}
+function shareToLens(){
+  if (!lastRecFile) return;
+  if (navigator.canShare && navigator.canShare({files:[lastRecFile]})){
+    navigator.share({files:[lastRecFile], title:'Identifier ce produit'}).catch(() => {});
+  } else {
+    toast('Partage indisponible : ouvrez Google Lens et importez la photo.');
+    window.open('https://lens.google.com/', '_blank', 'noopener');
+  }
+}
+async function recognizeByPhoto(){
+  const box = $('#photoPick');
+  const v = $('#video');
+  const file = (stream && v && v.videoWidth) ? await frameBlob(v) : await pickPhoto();   // « ce qui est dans le cadre » ou photo
+  if (!file) return;
+  lastRecFile = file;
+  box.innerHTML = '<p class="sub" style="font-size:.9rem">Lecture du texte du produit…</p>';
+  let text = '';
+  try{
+    await loadTesseract();
+    const res = await Tesseract.recognize(file, 'fra+eng');
+    text = (res && res.data && res.data.text) || '';
+  }catch(e){
+    text = '';
+  }
+  const toks = nameCandidates(text);
+  const qty = normQty(text.match(/\d+(?:[.,]\d+)?\s?(?:cl|ml|l|g|kg)\b/i)?.[0] || '');
+  const lensBtn = `<button class="btn ghost" style="padding:8px 14px;margin-top:8px" onclick="shareToLens()">🔍 Chercher avec Google Lens</button>`;
+  if (!toks.length){
+    box.innerHTML = `<p class="sub" style="font-size:.9rem">Aucun nom lisible sur la photo. Cadrez l’étiquette, bien éclairée et nette, ou essayez Google Lens.</p>${lensBtn}`;
+    return;
+  }
+  const queries = [...new Set([toks[0], toks.slice(0,2).join(' '), toks[1], toks[2]].filter(Boolean))].slice(0,4);
+  box.innerHTML = `<p class="sub" style="font-size:.9rem">Recherche dans 3 bases pour : ${esc(toks.slice(0,3).join(', '))}…</p>`;
+  const [perDb, wiki] = await Promise.all([
+    Promise.all(REC_DBS.map(async db => {
+      const items = []; let ok = false;
+      for (const q of queries){ const r = await recSearch(db, q); if (r === null) break; ok = true; items.push(...r); }
+      return {db, ok, items};
+    })),
+    Promise.all(toks.slice(0,2).map(wikiHints)).then(a => a.flat())
+  ]);
+  const seen = new Map();
+  perDb.forEach(d => d.items.forEach(x => { const k = x._db.key + ':' + x.code; if (!seen.has(k)) seen.set(k, x); }));
+  const status = perDb.map(d => `${d.db.name} ${d.ok ? '✓' : '✗ indisponible'}`).join(' · ');
+  const rank = x => {
+    const name = fold((x.product_name_fr||'') + ' ' + (x.product_name||'') + ' ' + (x.brands||''));
+    let sc = 0, hits = 0;
+    toks.forEach((t,i) => { if (name.includes(t)) { hits++; sc += i < 2 ? 3 : 2; } });
+    if (!hits) return 0;
+    if (qty && normQty(x.quantity) === qty) sc += 4;
+    const brand = fold((x.brands||'').split(',')[0]).trim();
+    if (brand.length >= 3 && wiki.some(w => w.includes(brand))) sc += 2;
+    return sc;
+  };
+  let list = [...seen.values()].map(x => ({x, sc: rank(x), vis: null})).filter(o => o.sc > 0).sort((a,b) => b.sc - a.sc).slice(0,8);
+  if (!list.length){
+    box.innerHTML = `<p class="sub" style="font-size:.9rem">Aucun produit trouvé pour « ${esc(toks.slice(0,2).join(' '))} ».</p><p class="sub" style="font-size:.8rem">Bases consultées : ${esc(status)}</p>${lensBtn}`;
+    return;
+  }
+  // comparaison visuelle avec la photo de face de chaque candidat
+  try{
+    const frame = visualFeat(await fileToBitmap(file));
+    await Promise.all(list.map(async o => {
+      if (!o.x.image_front_small_url) return;
+      try{ const im = await loadImg(o.x.image_front_small_url); o.vis = visualSim(frame, visualFeat(im)); }catch(e){}
+    }));
+    list.forEach(o => { if (o.vis !== null) o.sc += o.vis * 6; });
+    list.sort((a,b) => b.sc - a.sc);
+  }catch(e){}
+  const row = o => {
+    const x = o.x;
+    const nm = x.product_name_fr || x.product_name;
+    const cat = String(x.categories||'').split(',')[0].trim();
+    const img = x.image_front_small_url ? `<img src="${esc(x.image_front_small_url)}" alt="">` : '<div class="st-ph" style="width:44px;height:44px;font-size:20px">📦</div>';
+    const det = [x.brands, x.quantity].filter(Boolean).join(' · ');
+    const vis = o.vis !== null ? ` · ressemblance photo ${Math.round(o.vis*100)} %` : '';
+    return `<div class="nf-item" onclick="pickFromPhoto('${x.code}')">${img}<div style="min-width:0">
+      <b style="display:block;font-size:.95rem">${esc(nm)}</b>
+      <small style="display:block">${esc(det || 'Marque / contenance inconnues')}</small>
+      <small style="display:block;color:var(--muted)">${esc(cat)}${cat ? ' — ' : ''}${esc(x._db.name)}${vis}</small></div></div>`;
+  };
+  box.innerHTML = `<p style="font-weight:700;font-size:.92rem;margin:4px 0 6px">Est-ce l’un de ces produits ?</p>
+    <div class="nf-list">${list.map(row).join('')}</div>
+    <p class="sub" style="font-size:.78rem;margin-top:6px">Bases consultées : ${esc(status)}</p>${lensBtn}`;
+}
+function pickFromPhoto(code){ closeScanner(); scanCode(code); }
 function onDetected(code){
   if (busy) return;
   // Vibration tactile si disponible
@@ -1479,18 +1642,32 @@ function analyzeModal(){ const c=$('#modalCode').value.replace(/\D/g,''); if(!c)
    7. RÉCUPÉRATION DU PRODUIT
    ========================================================= */
 async function fetchFrom(dbKey, code){
-  try{
-    const r = await fetch(`${DB[dbKey]}${code}.json`);
-    if (!r.ok) return null;
-    const j = await r.json();
-    return j.status===1 ? {...j.product, _db:dbKey} : null;
-  }catch(e){ return null; }
+  for (let i = 0; i < 2; i++){
+    try{
+      const r = await fetch(`${DB[dbKey]}${code}.json`);
+      if (r.ok){ const j = await r.json(); return j.status===1 ? {...j.product, _db:dbKey} : null; }
+      if (r.status === 404) return null;         // absent : inutile de réessayer
+    }catch(e){}
+    await new Promise(res => setTimeout(res, 800));
+  }
+  return null;
 }
 async function findProductNet(code, catId){
-  const order = ['off','obf','opf'];
-  for (const db of order){
-    const p = await fetchFrom(db, code);
-    if (p) return p;
+  const order = ['off','offfr','obf','opf','opff'];
+  const results = await Promise.all(order.map(db => fetchFrom(db, code)));
+  const found = results.filter(Boolean);
+  if (found.length){
+    const primary = {...found[0]};
+    const sources = [...new Set(found.map(p => DB_NAME[p._db] || p._db))];   // miroir fr = même base
+    MERGE_KEYS.forEach(k => {
+      if (primary[k] !== undefined && primary[k] !== null && primary[k] !== '' && !(typeof primary[k]==='object' && !Array.isArray(primary[k]) && !Object.keys(primary[k]).length)) return;
+      for (const f of found.slice(1)){
+        const v = f[k];
+        if (v !== undefined && v !== null && v !== '' && !(typeof v==='object' && !Array.isArray(v) && !Object.keys(v).length)){ primary[k] = v; break; }
+      }
+    });
+    primary._src = sources;
+    return primary;
   }
   if (SAMPLES[code]) return {...SAMPLES[code], _db:'sample', _offline:true};
   return null;
@@ -1799,6 +1976,7 @@ async function scanCode(code, catId){
   const v = verdictFor(r.score, r.hasHigh);
 
   let badges = '';
+  if (p._src && p._src.length > 1) badges += `<span class="badge">Sources : ${esc(p._src.join(' + '))}</span>`;
   if (r.grade) badges += `<span class="badge"><span class="ns" style="background:${NUTRI_COLORS[r.grade]||'#64748b'}">${r.grade.toUpperCase()}</span>Nutri-Score</span>`;
   if (r.nova) badges += `<span class="badge">NOVA ${r.nova}</span>`;
   badges += `<span class="badge">${r.list.length} substance${r.list.length>1?'s':''} signalée${r.list.length>1?'s':''}</span>`;
@@ -2993,6 +3171,6 @@ function setJacques(score){
   box.style.display = 'flex';
 }
 </script>
-
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4a05b4d4c2d9a29',t:'MTc5MTkxNTYwOQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>
 
 </body></html>
