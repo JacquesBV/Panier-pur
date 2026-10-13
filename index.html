@@ -764,6 +764,12 @@
   .why summary{cursor:pointer;font-weight:800}
   .why ul{margin:8px 0 0 18px}
   .why a{color:var(--mint)}
+  .shop-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-top:6px;flex-wrap:wrap}
+  .shop-item .ktag{display:inline-block;font-size:.72rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+  .shop-item.eq{border-color:rgba(134,239,172,.6)}
+  .shop-item b{display:block;font-size:1.02rem}
+  .shop-act{flex-shrink:0}
+  .shop-state{font-weight:800;color:var(--mint);font-size:.9rem}
 </style>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#06120e">
@@ -1150,6 +1156,8 @@
   </div>
   <div class="tabs">
     <button class="tab on" data-tab="basket" onclick="showTab('basket')">🧺 Panier</button>
+    <button class="tab" data-tab="shop" onclick="showTab('shop')">🪙 Boutique</button>
+    <button class="tab" data-tab="shopping" onclick="showTab('shopping')">🛒 Courses</button>
     <button class="tab" data-tab="history" onclick="showTab('history')">🕘 Historique</button>
     <button class="tab" data-tab="stats" onclick="showTab('stats')">📊 Statistiques</button>
     <button class="tab" data-tab="profile" onclick="showTab('profile')">⚑ Mon profil</button>
@@ -1167,20 +1175,22 @@
           <p class="sub" id="basketSub" style="font-size:.92rem;margin-top:6px">Ajoutez des produits depuis un résultat de scan.</p>
         </div>
       </div>
+      <div class="kicker" style="margin-top:22px">Produits scannés</div>
       <div id="basketList"></div>
-      <div id="shopBox"></div>
-      <div id="shopList"></div>
       <div style="display:flex;gap:10px;margin-top:22px;flex-wrap:wrap">
         <button class="btn btn-sm" onclick="basketImage()">🖼 Image du panier</button>
         <button class="btn btn-sm" onclick="exportCSV()">⬇ Exporter (CSV)</button>
         <button class="btn btn-sm ghost" onclick="clearBasket()">Vider le panier</button>
       </div>
     </section>
+    <section class="tabpane" id="tab-shop"><div id="shopBox"></div></section>
+    <section class="tabpane" id="tab-shopping"><div id="shopList"></div></section>
     <section class="tabpane" id="tab-history"><div style="display:flex;justify-content:flex-end"><button class="btn btn-sm ghost" onclick="startCompare()">⚖ Comparer deux produits</button></div>
       <div id="historyList"></div></section>
     <section class="tabpane" id="tab-stats"><div id="statsBox"></div></section>
     <section class="tabpane" id="tab-profile">
       <p class="sub" style="font-size:.92rem">Indiquez ce que vous souhaitez éviter : Panier Pur signalera ces éléments en priorité sur chaque produit. Vos préférences restent sur cet appareil.</p>
+      <div class="kicker" style="margin-top:22px">Mes préférences</div>
       <div id="profileBox"></div>
       <div id="displayBox"></div>
       <div id="shareBox"></div>
@@ -2211,16 +2221,25 @@ function renderCoins(){
   const c = COIN.get();
   const t = $('#drTitle'); if (t) t.textContent = c.eq.title || 'Panier Pur';
   const box = $('#shopBox'); if (!box) return;
-  box.innerHTML = `<div style="margin-top:26px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
-      <div><div class="kicker">Boutique</div><p class="sub" style="font-size:.85rem">Gagnez ${PURE_REWARD} 🪙 à chaque produit pur scanné (une fois par produit).</p></div>
-      <span class="coin-pill">🪙 ${c.balance}</span></div>
+  const KIND = {title:'Titre', theme:'Thème', gold:'Bonus'};
+  const items = [...SHOP].sort((a, b) => b.price - a.price || a.name.localeCompare(b.name,'fr'));
+  box.innerHTML = `
+    <div class="shop-head">
+      <div><div class="kicker">Ma boutique</div>
+      <p class="sub" style="font-size:.9rem">Gagnez ${PURE_REWARD} 🪙 par produit pur scanné (une fois par produit).</p></div>
+      <span class="coin-pill">🪙 ${c.balance}</span>
+    </div>
     ${goalsHTML()}
-    ${[...SHOP.filter(i => i.kind === 'title').sort((a,b) => b.price - a.price), ...SHOP.filter(i => i.kind !== 'title')].map(it => {
+    <div class="kicker" style="margin-top:22px">Objets · du plus cher au moins cher</div>
+    ${items.map(it => {
       const owned = c.owned.includes(it.id);
       const on = it.kind === 'title' ? c.eq.title === it.name : it.kind === 'theme' ? c.eq.theme === it.theme : c.eq.gold;
-      const btn = !owned ? `<button class="btn btn-sm" onclick="buyItem('${it.id}')">${it.price} 🪙</button>`
-        : `<button class="btn btn-sm ${on?'':'ghost'}" onclick="equipItem('${it.id}')">${on ? '✓ Équipé' : 'Équiper'}</button>`;
-      return `<div class="shop-item"><div><b>${esc(it.name)}</b><small>${esc(it.desc)}</small></div>${btn}</div>`;
+      const act = on ? '<span class="shop-state on">✓ Équipé</span>'
+        : owned ? `<button class="btn btn-sm ghost" onclick="equipItem('${it.id}')">Équiper</button>`
+        : `<button class="btn btn-sm" onclick="buyItem('${it.id}')" ${c.balance < it.price ? 'title="Pas encore assez de 🪙"' : ''}>Acheter · ${it.price} 🪙</button>`;
+      return `<div class="shop-item ${on ? 'eq' : ''}">
+        <div><span class="ktag">${KIND[it.kind]} · ${it.price} 🪙</span><b>${esc(it.name)}</b><small>${esc(it.desc)}</small></div>
+        <div class="shop-act">${act}</div></div>`;
     }).join('')}`;
 }
 
@@ -2547,6 +2566,8 @@ function showTab(t){
   document.querySelectorAll('.tab').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
   document.querySelectorAll('.tabpane').forEach(p => p.classList.toggle('on', p.id === 'tab-' + t));
   if (t === 'basket')  renderBasket();
+  if (t === 'shop')    renderCoins();
+  if (t === 'shopping') renderShopList();
   if (t === 'history') renderHistory();
   if (t === 'stats')   renderStats();
   if (t === 'profile'){ renderProfile(); renderShare(); }
@@ -3496,6 +3517,6 @@ function setJacques(score){
   box.style.display = 'flex';
 }
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4a090b9d845703e',t:'MTc5MTkxNzc5Nw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4a0a6f33a229ec4',t:'MTc5MTkxODcwNw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>
 
 </body></html>
