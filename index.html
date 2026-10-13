@@ -738,6 +738,32 @@
   .coin-pill{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:999px;background:rgba(251,191,36,.14);border:1px solid rgba(251,191,36,.5);color:#fde68a;font-weight:800}
   .shop-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border:1px solid var(--border);border-radius:14px;margin-top:8px;background:var(--card)}
   .shop-item small{color:var(--muted);display:block}
+
+  /* v27 — améliorations */
+  html.big{font-size:19px}
+  html.hc .li,html.hc .alt,html.hc .shop-item,html.hc .where,html.hc .why{border-width:2px!important;border-color:rgba(255,255,255,.5)!important}
+  html.theme-ocean{--mint:#38bdf8;--mint2:#0284c7}
+  html.theme-gold{--mint:#fbbf24;--mint2:#d97706}
+  .goals{margin-top:14px}
+  .goal{padding:10px 12px;border:1px solid var(--border);border-radius:12px;margin-top:8px;background:var(--card)}
+  .goal.ok{border-color:rgba(251,191,36,.6)}
+  .goal>div:first-child{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+  .goal small{color:var(--muted)}
+  .gbar{height:7px;border-radius:9px;background:rgba(255,255,255,.08);margin-top:8px;overflow:hidden}
+  .gbar i{display:block;height:100%;background:linear-gradient(90deg,var(--mint),var(--mint2));border-radius:9px}
+  .shop-add{display:flex;gap:8px;margin:10px 0}
+  .shop-add input{flex:1;padding:10px 12px;border-radius:12px;border:1px solid var(--border);background:var(--card);color:var(--text)}
+  .shop-row{display:flex;justify-content:space-between;align-items:center;padding:8px 4px;border-bottom:1px solid var(--border)}
+  .shop-row label{cursor:pointer;flex:1}
+  .shop-row.done label{text-decoration:line-through;color:var(--muted)}
+  .shop-tools{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .where{margin-top:14px;padding:12px 14px;border-radius:14px;border:1px solid var(--border);background:var(--card);font-size:.92rem}
+  .where .pill{display:inline-block;padding:3px 9px;border-radius:999px;border:1px solid var(--border);margin:3px}
+  .where .pill.mine{background:rgba(52,211,153,.2);border-color:#34d399;font-weight:800}
+  .why{margin-top:12px;padding:12px 14px;border-radius:14px;border:1px solid var(--border);background:var(--card);font-size:.92rem}
+  .why summary{cursor:pointer;font-weight:800}
+  .why ul{margin:8px 0 0 18px}
+  .why a{color:var(--mint)}
 </style>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#06120e">
@@ -1022,6 +1048,8 @@
 
       <div class="hz-alert" id="hzAlert" style="display:none"></div>
       <div class="profile-alert" id="profileAlert"></div>
+      <div class="where" id="whereBox"></div>
+      <details class="why" id="whyBox"></details>
 <div class="ro-actions">
   <span class="qty" id="addQty"><button onclick="stepAdd(-1)" aria-label="Moins">−</button><b id="addQtyN">1</b><button onclick="stepAdd(1)" aria-label="Plus">+</button></span>
   <button class="btn btn-sm" id="addBasketBtn" onclick="toggleBasket()">＋ Ajouter au panier</button>
@@ -1141,7 +1169,9 @@
       </div>
       <div id="basketList"></div>
       <div id="shopBox"></div>
+      <div id="shopList"></div>
       <div style="display:flex;gap:10px;margin-top:22px;flex-wrap:wrap">
+        <button class="btn btn-sm" onclick="basketImage()">🖼 Image du panier</button>
         <button class="btn btn-sm" onclick="exportCSV()">⬇ Exporter (CSV)</button>
         <button class="btn btn-sm ghost" onclick="clearBasket()">Vider le panier</button>
       </div>
@@ -1152,6 +1182,7 @@
     <section class="tabpane" id="tab-profile">
       <p class="sub" style="font-size:.92rem">Indiquez ce que vous souhaitez éviter : Panier Pur signalera ces éléments en priorité sur chaque produit. Vos préférences restent sur cet appareil.</p>
       <div id="profileBox"></div>
+      <div id="displayBox"></div>
       <div id="shareBox"></div>
     </section>
   </div>
@@ -1690,8 +1721,15 @@ async function findProductNet(code, catId){
       }
     });
     primary._src = sources;
+    const slim = {code, _db: primary._db, _src: sources};
+    MERGE_KEYS.forEach(k => { if (primary[k] !== undefined) slim[k] = primary[k]; });
+    const pc = LS.get('pcache', {}); pc[code] = slim;
+    const ks = Object.keys(pc); if (ks.length > 60) delete pc[ks[0]];
+    LS.set('pcache', pc);
     return primary;
   }
+  const cached = LS.get('pcache', {})[code];
+  if (cached) return {...cached, _offline:true, _cached:true};
   if (SAMPLES[code]) return {...SAMPLES[code], _db:'sample', _offline:true};
   return null;
 }
@@ -2028,6 +2066,7 @@ async function scanCode(code, catId){
   runFill(target, 2300, ()=>{
     showStamp(r.score, r.hasHigh);
     awardPure(code, r.score);
+    awardGoals();
     showHazardAlert(r.list, r.score, r.breakdown, r.parts);
     soundVerdict(r.score);
     celebrate(r.score);
@@ -2101,6 +2140,7 @@ function applyProfile(r){
 
 /* --- Données du produit courant --- */
 function onProductRendered(p, r, code){
+  fillExtras(p, r);
   addQty = 1; $('#addQtyN').textContent = 1;
   const hits = r.list.filter(h => h.personal);
   lastResult = {
@@ -2131,10 +2171,19 @@ const SHOP = [
   {id:'t1', kind:'title', name:'Pur Explorateur',   price:30,  desc:'Titre affiché dans votre espace'},
   {id:'t2', kind:'title', name:'Gardien du panier', price:80,  desc:'Titre affiché dans votre espace'},
   {id:'t3', kind:'title', name:'Champion Pur',      price:150, desc:'Titre affiché dans votre espace'},
-  {id:'g1', kind:'gold',  name:'Confettis dorés',   price:60,  desc:'Célébration dorée à chaque produit pur'}
+  {id:'g1', kind:'gold',  name:'Confettis dorés',   price:60,  desc:'Célébration dorée à chaque produit pur'},
+  {id:'t4', kind:'title', name:'Expert des étiquettes', price:200, desc:'Titre affiché dans votre espace'},
+  {id:'t5', kind:'title', name:'Légende du pur',    price:400, desc:'Titre affiché dans votre espace'},
+  {id:'th1', kind:'theme', theme:'ocean', name:'Thème Océan', price:200, desc:'Couleurs bleues sur tout le site'},
+  {id:'th2', kind:'theme', theme:'gold',  name:'Thème Or',    price:250, desc:'Accents dorés sur tout le site'}
 ];
 const COIN = {
-  get(){ return LS.get('coins', {balance:0, seen:{}, owned:[], eq:{title:'', gold:false}}); },
+  get(){
+    const d = LS.get('coins', {});
+    d.balance = d.balance || 0; d.seen = d.seen || {}; d.owned = d.owned || []; d.goals = d.goals || {};
+    d.eq = Object.assign({title:'', gold:false, theme:''}, d.eq || {});
+    return d;
+  },
   save(c){ LS.set('coins', c); renderCoins(); }
 };
 function awardPure(code, score){
@@ -2154,22 +2203,154 @@ function equipItem(id){
   if (!it || !c.owned.includes(id)) return;
   if (it.kind === 'title') c.eq.title = c.eq.title === it.name ? '' : it.name;
   if (it.kind === 'gold') c.eq.gold = !c.eq.gold;
+  if (it.kind === 'theme') c.eq.theme = c.eq.theme === it.theme ? '' : it.theme;
   COIN.save(c);
 }
 function renderCoins(){
+  applyDisplay();
   const c = COIN.get();
   const t = $('#drTitle'); if (t) t.textContent = c.eq.title || 'Panier Pur';
   const box = $('#shopBox'); if (!box) return;
   box.innerHTML = `<div style="margin-top:26px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
       <div><div class="kicker">Boutique</div><p class="sub" style="font-size:.85rem">Gagnez ${PURE_REWARD} 🪙 à chaque produit pur scanné (une fois par produit).</p></div>
       <span class="coin-pill">🪙 ${c.balance}</span></div>
-    ${SHOP.map(it => {
+    ${goalsHTML()}
+    ${[...SHOP.filter(i => i.kind === 'title').sort((a,b) => b.price - a.price), ...SHOP.filter(i => i.kind !== 'title')].map(it => {
       const owned = c.owned.includes(it.id);
-      const on = it.kind === 'title' ? c.eq.title === it.name : c.eq.gold;
+      const on = it.kind === 'title' ? c.eq.title === it.name : it.kind === 'theme' ? c.eq.theme === it.theme : c.eq.gold;
       const btn = !owned ? `<button class="btn btn-sm" onclick="buyItem('${it.id}')">${it.price} 🪙</button>`
         : `<button class="btn btn-sm ${on?'':'ghost'}" onclick="equipItem('${it.id}')">${on ? '✓ Équipé' : 'Équiper'}</button>`;
       return `<div class="shop-item"><div><b>${esc(it.name)}</b><small>${esc(it.desc)}</small></div>${btn}</div>`;
     }).join('')}`;
+}
+
+/* --- v27 : objectifs, affichage, liste de courses, image du panier, lieux d'achat --- */
+const GOALS = [
+  {id:'pur5', label:'Scanner 5 produits sains', n:5, reward:30, count:() => weekDistinct(h => h.score !== null && h.score <= 30)},
+  {id:'div3', label:'Scanner 3 produits différents', n:3, reward:15, count:() => weekDistinct(() => true)}
+];
+function weekDistinct(pred){
+  const since = Date.now() - 7 * 864e5, set = new Set();
+  scanHistory.forEach(h => { if (h.date >= since && pred(h)) set.add(h.code); });
+  return set.size;
+}
+function weekKey(){
+  const d = new Date(), y = d.getFullYear();
+  return y + '-' + Math.ceil(((d - new Date(y,0,1)) / 864e5 + 1) / 7);
+}
+function awardGoals(){
+  const c = COIN.get(), wk = weekKey();
+  c.goals[wk] = c.goals[wk] || {};
+  let changed = false;
+  GOALS.forEach(g => {
+    if (!c.goals[wk][g.id] && g.count() >= g.n){
+      c.goals[wk][g.id] = true; c.balance += g.reward; changed = true;
+      toast(`🎯 Objectif atteint : +${g.reward} 🪙`);
+    }
+  });
+  if (changed) COIN.save(c);
+}
+function goalsHTML(){
+  const c = COIN.get(), done = c.goals[weekKey()] || {};
+  return `<div class="goals"><div class="kicker" style="margin-bottom:4px">Objectifs de la semaine</div>${GOALS.map(g => {
+    const v = Math.min(g.count(), g.n), ok = !!done[g.id];
+    return `<div class="goal ${ok?'ok':''}"><div><b>${esc(g.label)}</b><small>${ok ? '✓ Atteint' : v + ' / ' + g.n} · +${g.reward} 🪙</small></div><div class="gbar"><i style="width:${Math.round(v/g.n*100)}%"></i></div></div>`;
+  }).join('')}</div>`;
+}
+
+function getDisplay(){ return LS.get('display', {big:false, contrast:false}); }
+function setDisplay(k, v){ const d = getDisplay(); d[k] = v; LS.set('display', d); applyDisplay(); renderDisplay(); }
+function applyDisplay(){
+  const d = getDisplay(), c = COIN.get();
+  document.documentElement.className = [d.big ? 'big' : '', d.contrast ? 'hc' : '', c.eq.theme ? 'theme-' + c.eq.theme : ''].filter(Boolean).join(' ');
+}
+function renderDisplay(){
+  const box = $('#displayBox'); if (!box) return;
+  const d = getDisplay();
+  box.innerHTML = `<div class="kicker" style="margin-top:22px">Affichage et accessibilité</div>
+    <label class="prof-item"><span><b>Texte agrandi</b><br><small style="color:var(--muted)">Lecture plus facile</small></span><input type="checkbox" ${d.big?'checked':''} onchange="setDisplay('big',this.checked)"><span class="switch"></span></label>
+    <label class="prof-item"><span><b>Contraste renforcé</b><br><small style="color:var(--muted)">Bordures et textes plus nets</small></span><input type="checkbox" ${d.contrast?'checked':''} onchange="setDisplay('contrast',this.checked)"><span class="switch"></span></label>`;
+}
+
+function shopItems(){ return LS.get('shopping', []); }
+function shopSave(a){ LS.set('shopping', a); renderShopList(); }
+function shopNewId(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+function shopAdd(text){ text = (text||'').trim(); if (!text) return; const a = shopItems(); a.push({id:shopNewId(), text, done:false}); shopSave(a); }
+function shopAddInput(){ const i = $('#shopInput'); shopAdd(i ? i.value : ''); }
+function shopToggle(id){ const a = shopItems(); const it = a.find(x => x.id === id); if (it) it.done = !it.done; shopSave(a); }
+function shopDel(id){ shopSave(shopItems().filter(x => x.id !== id)); }
+function shopClearDone(){ shopSave(shopItems().filter(x => !x.done)); }
+function shopFromBasket(){
+  const a = shopItems(); let n = 0;
+  basket.forEach(b => { if (!a.some(x => x.text === b.name)){ a.push({id:shopNewId(), text:b.name, done:false}); n++; } });
+  shopSave(a); toast(n ? `${n} produit(s) ajouté(s) à la liste` : 'Déjà dans la liste');
+}
+function shopShare(){
+  const a = shopItems();
+  if (!a.length){ toast('Liste vide'); return; }
+  const txt = 'Liste de courses :\n' + a.map(x => `${x.done ? '☑' : '☐'} ${x.text}`).join('\n');
+  if (navigator.share) navigator.share({title:'Liste de courses', text:txt}).catch(() => {});
+  else if (navigator.clipboard){ navigator.clipboard.writeText(txt); toast('Liste copiée'); }
+}
+function renderShopList(){
+  const box = $('#shopList'); if (!box) return;
+  const a = shopItems();
+  box.innerHTML = `<div class="kicker" style="margin-top:26px">Liste de courses</div>
+    <div class="shop-add"><input id="shopInput" placeholder="Ajouter un article…" maxlength="60" onkeydown="if(event.key==='Enter')shopAddInput()"><button class="btn btn-sm" onclick="shopAddInput()">Ajouter</button></div>
+    ${a.map(x => `<div class="shop-row ${x.done?'done':''}"><label><input type="checkbox" ${x.done?'checked':''} onchange="shopToggle('${x.id}')"> ${esc(x.text)}</label><button class="rm" onclick="shopDel('${x.id}')" aria-label="Supprimer">✕</button></div>`).join('') || '<p class="sub" style="font-size:.9rem">Votre liste est vide.</p>'}
+    <div class="shop-tools"><button class="btn btn-sm ghost" onclick="shopFromBasket()">+ Produits du panier</button><button class="btn btn-sm ghost" onclick="shopClearDone()">Retirer les cochés</button><button class="btn btn-sm ghost" onclick="shopShare()">↗ Partager</button></div>`;
+}
+
+function clipText(x, str, max){ return str.length > max ? str.slice(0, max - 1) + '…' : str; }
+function basketImage(){
+  if (!basket.length){ toast('Panier vide'); return; }
+  const W = 1080, H = 1350, c = document.createElement('canvas'); c.width = W; c.height = H;
+  const x = c.getContext('2d');
+  const g = x.createLinearGradient(0, 0, W, H); g.addColorStop(0, '#06170f'); g.addColorStop(1, '#0b3b2a');
+  x.fillStyle = g; x.fillRect(0, 0, W, H);
+  const units = basket.reduce((a,b) => a + (b.qty || 1), 0);
+  const scored = basket.filter(b => b.score !== null), wsum = scored.reduce((a,b) => a + (b.qty || 1), 0);
+  const avg = scored.length ? Math.round(scored.reduce((a,b) => a + b.score * (b.qty || 1), 0) / wsum) : null;
+  x.fillStyle = '#86efac'; x.font = '700 40px sans-serif'; x.fillText('PANIER PUR', 70, 100);
+  x.fillStyle = '#ecfdf5'; x.font = '900 84px sans-serif'; x.fillText('Mon panier', 70, 200);
+  x.fillStyle = avg === null ? '#64748b' : colorFor(avg); x.font = '900 220px sans-serif'; x.fillText(avg === null ? '—' : String(avg), 70, 420);
+  x.fillStyle = '#cbd5e1'; x.font = '500 40px sans-serif'; x.fillText('/100 · score moyen pondéré', 70, 490);
+  x.font = '600 42px sans-serif'; x.fillText(`${units} article${units>1?'s':''} · ${basket.length} produit${basket.length>1?'s':''}`, 70, 560);
+  let y = 640;
+  [...basket].sort((a,b) => (b.score ?? -1) - (a.score ?? -1)).slice(0, 9).forEach(b => {
+    x.fillStyle = 'rgba(255,255,255,.06)'; x.fillRect(60, y - 44, W - 120, 74);
+    x.fillStyle = '#ecfdf5'; x.font = '600 36px sans-serif';
+    x.fillText(clipText(x, `${b.name}${b.brand ? ' · ' + b.brand : ''}`, 46) + `  ×${b.qty || 1}`, 90, y);
+    x.fillStyle = b.score === null ? '#64748b' : colorFor(b.score); x.font = '900 40px sans-serif'; x.textAlign = 'right';
+    x.fillText(b.score === null ? '—' : String(b.score), W - 90, y); x.textAlign = 'left';
+    y += 92;
+  });
+  if (basket.length > 9){ x.fillStyle = '#94a3b8'; x.font = '500 34px sans-serif'; x.fillText(`+ ${basket.length - 9} autre(s)`, 90, y); }
+  x.fillStyle = '#94a3b8'; x.font = '500 34px sans-serif'; x.fillText('Scannez, comprenez, choisissez pur.', 70, H - 70);
+  c.toBlob(bl => {
+    const a = document.createElement('a'); a.href = URL.createObjectURL(bl); a.download = 'mon-panier-pur.png';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  }, 'image/png');
+}
+
+const SRC_LINKS = [['EFSA','https://www.efsa.europa.eu/'],['ANSES','https://www.anses.fr/'],['CIRC (IARC)','https://www.iarc.who.int/'],['Santé publique France (Nutri-Score)','https://www.santepubliquefrance.fr/']];
+const cleanName = t => fold(t).replace(/[^a-z]/g, '');
+function fillExtras(p, r){
+  const sel = currentStore();
+  const wh = String(p.stores || '').split(',').map(x => x.trim()).filter(Boolean);
+  $('#whereBox').innerHTML = wh.length
+    ? `<b>Référencé chez :</b> ${wh.slice(0,12).map(w => { const hit = sel && cleanName(w).includes(cleanName(sel.name)); return `<span class="pill ${hit?'mine':''}">${esc(w)}</span>`; }).join('')}
+       <div style="margin-top:6px;font-size:.85rem">${sel
+         ? (wh.some(w => cleanName(w).includes(cleanName(sel.name)))
+             ? `✓ Disponible chez votre magasin (${esc(sel.name)}), d’après la base collaborative.`
+             : `Non référencé chez ${esc(sel.name)} dans la base collaborative.`)
+         : 'Choisissez votre magasin pour savoir s’il y est référencé.'}</div>`
+    : `<b>Lieux d’achat :</b> non renseignés dans la base collaborative.`;
+  $('#whyBox').innerHTML = `<summary>Pourquoi ce score ?</summary>
+    <ul>${r.breakdown.map(b => `<li>${esc(b)}</li>`).join('') || '<li>Pas de détail disponible.</li>'}</ul>
+    <p style="margin-top:8px;font-size:.85rem;color:var(--muted)">Méthode : 60 % nutrition (Nutri-Score), 30 % additifs à risque, 10 % transformation (NOVA). Le label bio n’entre pas dans le score.</p>
+    <p style="margin-top:6px;font-size:.85rem">Références : ${SRC_LINKS.map(([n,u]) => `<a href="${u}" target="_blank" rel="noopener">${esc(n)}</a>`).join(' · ')}</p>`;
 }
 
 /* --- Panier --- */
@@ -2229,6 +2410,7 @@ function itemHTML(b, i){
 }
 function renderBasket(){
   renderCoins();
+  renderShopList();
   const scored = basket.filter(b => b.score !== null);
   const wsum = scored.reduce((a,b) => a + (b.qty || 1), 0);
   const avg = scored.length ? Math.round(scored.reduce((a,b) => a + b.score * (b.qty || 1), 0) / wsum) : null;
@@ -2335,6 +2517,7 @@ function renderStats(){
 
 /* --- Profil --- */
 function renderProfile(){
+  renderDisplay();
   $('#profileBox').innerHTML = Object.keys(PROFILE_LABELS).map(k => `
     <label class="prof-item">
       <span><b>${PROFILE_LABELS[k][0]}</b><br><small style="color:var(--muted)">${PROFILE_LABELS[k][1]}</small></span>
@@ -3103,9 +3286,11 @@ function storeBadge(s, big){
 }
 function currentStore(){ const id = LS.get('store', null); return STORES.find(s => s.id === id) || null; }
 const STORE_CATS = [
-  ['Boissons','beverages'], ['Chips et snacks','chips'], ['Pâtes à tartiner','hazelnut-spreads'], ['Biscuits','biscuits'],
-  ['Céréales','breakfast-cereals'], ['Yaourts','yogurts'], ['Chocolat','chocolates'], ['Conserves','canned-foods'],
-  ['Pâtes et riz','pastas'], ['Surgelés','frozen-foods']
+  ['Boissons',['jus','soda','eau aromatisée','boisson']], ['Chips et snacks',['chips','tortilla','snacks apéritif','biscuits apéritifs']],
+  ['Pâtes à tartiner',['pâte à tartiner','noisette cacao']], ['Biscuits',['biscuits','cookies','sablés']],
+  ['Céréales',['céréales petit-déjeuner','muesli']], ['Yaourts',['yaourt','yaourts nature','skyr']],
+  ['Chocolat',['chocolat','tablette chocolat']], ['Conserves',['conserve','haricots','thon']],
+  ['Pâtes et riz',['pâtes','riz']], ['Surgelés',['surgelé','pizza surgelée','légumes surgelés']]
 ];
 function renderStores(){
   const cur = LS.get('store', null);
@@ -3115,7 +3300,7 @@ function renderStores(){
     ? `<div class="store-banner"><div>${storeBadge(s,true)}<small>Magasin sélectionné</small><span>Recherches et alternatives filtrées sur cette enseigne.</span></div><button class="btn btn-sm ghost" onclick="pickStore('${s.id}')">Retirer</button></div>`
     : `<div class="store-banner none"><span>Aucun magasin choisi : touchez votre enseigne ci-dessus.</span></div>`;
   $('#storeCats').innerHTML = s
-    ? `<p class="hint" style="margin:14px 0 8px">Parcourir le catalogue ${esc(s.name)} :</p><div class="cat-chips">${STORE_CATS.map(([l,t]) => `<button class="chip" onclick="browseCat('${esc(l)}','${t}')">${esc(l)}</button>`).join('')}</div>`
+    ? `<p class="hint" style="margin:14px 0 8px">Parcourir le catalogue ${esc(s.name)} :</p><div class="cat-chips">${STORE_CATS.map(([l,t]) => `<button class="chip" onclick="browseCat('${esc(l)}')">${esc(l)}</button>`).join('')}</div>`
     : '';
 }
 function pickStore(id){
@@ -3128,28 +3313,47 @@ function pickStore(id){
     ? `Magasin choisi : ${s.name}. Parcourez le catalogue par rayon ou recherchez un produit.`
     : 'Aucun magasin choisi : les alternatives proposées sont générales.';
 }
-async function browseCat(label, tag){
+async function browseCat(label){
   const s = currentStore();
   if (!s){ toast('Choisissez d’abord votre magasin'); return; }
-  $('#storeStatus').textContent = `Catalogue ${s.name} · ${label}…`;
+  const terms = (STORE_CATS.find(c => c[0] === label) || [label, [label]])[1];
+  $('#storeStatus').textContent = `Catalogue ${s.name} · ${label}… (recherche dans plusieurs bases)`;
   $('#storeResults').innerHTML = '';
+  const key = 'pp.cat.' + s.id + '.' + fold(label);
   try{
-    const list = await offSearch(`stores_tags=${s.tag}&tagtype_0=categories&tag_contains_0=contains&tag_0=${tag}&page_size=40&fields=${STORE_FIELDS}`);
+    // Une requête par mot-clé, en parallèle ; chaque requête a ses propres nouveaux essais
+    const batches = await Promise.allSettled(terms.map(t => offSearch(`search_terms=${encodeURIComponent(t)}&stores_tags=${s.tag}&page_size=50&fields=${STORE_FIELDS}`)));
+    const seen = new Map(); let ok = 0;
+    batches.forEach(b => { if (b.status === 'fulfilled'){ ok++; b.value.forEach(x => { if (x.code && x.product_name && !seen.has(x.code)) seen.set(x.code, x); }); } });
+    if (!ok && batches.length){
+      const cached = LS.get(key, null);
+      if (cached){ renderCat(s, label, cached, ' (résultats mis en cache)'); return; }
+      $('#storeStatus').textContent = 'Catalogue indisponible pour le moment (Open Food Facts surchargé). Réessayez dans un instant.';
+      return;
+    }
+    // Garder les produits dont la fiche confirme l'enseigne (évite les faux positifs)
+    const cleanS = cleanName(s.name);
+    const list = [...seen.values()].filter(x => cleanName(String(x.stores || '')).includes(cleanS) || String(x.stores || '') === '');
     const scored = list
-      .filter(x => x.code && x.product_name)
       .map(x => ({x, s: analyze(x).score}))
       .filter(o => o.s !== null)
       .sort((a, b) => a.s - b.s)
-      .slice(0, 12);
-    if (!scored.length){
-      $('#storeStatus').textContent = `Aucun produit « ${label} » référencé chez ${s.name} dans la base collaborative.`;
-      return;
-    }
-    $('#storeStatus').textContent = `${label} chez ${s.name} : ${scored.length} produit(s), du plus sain au moins sain.`;
-    $('#storeResults').innerHTML = `<div class="alt-grid">${scored.map(altCard).join('')}</div>`;
+      .slice(0, 24)
+      .map(o => o.x);
+    LS.set(key, scored);
+    renderCat(s, label, scored, '');
   }catch(e){
     $('#storeStatus').textContent = 'Catalogue indisponible pour le moment (Open Food Facts surchargé). Réessayez dans un instant.';
   }
+}
+function renderCat(s, label, list, note){
+  if (!list.length){
+    $('#storeStatus').textContent = `Aucun produit « ${label} » avec une composition exploitable chez ${s.name} dans les bases consultées.`;
+    return;
+  }
+  const scored = list.map(x => ({x, s: analyze(x).score})).sort((a, b) => a.s - b.s);
+  $('#storeStatus').textContent = `${label} chez ${s.name} : ${scored.length} produit(s), du plus sain au moins sain${note}.`;
+  $('#storeResults').innerHTML = `<div class="alt-grid">${scored.map(altCard).join('')}</div>`;
 }
 
 /* Requête Open Food Facts avec un nouvel essai (le service répond parfois 503) */
@@ -3292,6 +3496,6 @@ function setJacques(score){
   box.style.display = 'flex';
 }
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4a078f46b953c98',t:'MTc5MTkxNjgyMw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4a090b9d845703e',t:'MTc5MTkxNzc5Nw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>
 
 </body></html>
