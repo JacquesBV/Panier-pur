@@ -354,6 +354,7 @@
   .tab:hover{color:var(--text)}
   .tab.on{color:var(--text);background:var(--card-strong)}
   .dr-body{flex:1;overflow-y:auto;padding:22px}
+  .dr-body .tabpane{padding:0}
   .tabpane{display:none}
   .tabpane.on{display:block;animation:fadeUp .5s both}
   .gauge-wrap{display:flex;align-items:center;gap:20px}
@@ -630,17 +631,17 @@
   .shop-act{flex-shrink:0}
   .shop-state{font-weight:800;color:var(--mint);font-size:.9rem}
   /* v31 — calculatrice */
-  .calc{max-width:360px;margin:18px auto 0;padding:18px;border-radius:30px;background:linear-gradient(160deg,rgba(255,255,255,.09),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.14);box-shadow:0 24px 60px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.12);backdrop-filter:blur(14px);position:relative;overflow:hidden}
+  .calc{max-width:min(360px,calc(100vw - 56px));margin:clamp(4px,1.2vh,18px) auto 0;padding:clamp(12px,2.2vh,18px);border-radius:30px;background:linear-gradient(160deg,rgba(255,255,255,.09),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.14);box-shadow:0 24px 60px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.12);backdrop-filter:blur(14px);position:relative;overflow:hidden}
   .calc::before{content:"";position:absolute;width:260px;height:260px;right:-120px;top:-120px;background:radial-gradient(circle,rgba(52,211,153,.35),transparent 65%);animation:calcFloat 9s ease-in-out infinite;pointer-events:none}
   @keyframes calcFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(-40px,60px)}}
-  .calc-screen{position:relative;border-radius:22px;padding:14px 18px 16px;min-height:118px;background:radial-gradient(circle at 85% 0%,rgba(52,211,153,.28),transparent 60%),linear-gradient(180deg,#071c13,#04110b);border:1px solid rgba(134,239,172,.28);box-shadow:inset 0 0 30px rgba(0,0,0,.5),0 0 0 4px rgba(16,185,129,.06);text-align:right}
+  .calc-screen{position:relative;border-radius:22px;padding:14px 18px 16px;min-height:var(--cs,clamp(70px,11vh,118px));background:radial-gradient(circle at 85% 0%,rgba(52,211,153,.28),transparent 60%),linear-gradient(180deg,#071c13,#04110b);border:1px solid rgba(134,239,172,.28);box-shadow:inset 0 0 30px rgba(0,0,0,.5),0 0 0 4px rgba(16,185,129,.06);text-align:right}
   .calc-expr{min-height:22px;color:var(--muted);font-size:.98rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
-  .calc-res{font-size:2.7rem;font-weight:850;font-variant-numeric:tabular-nums;line-height:1.1;margin-top:4px;background:linear-gradient(90deg,#86efac,#fde68a 120%);-webkit-background-clip:text;background-clip:text;color:transparent;word-break:break-all}
+  .calc-res{font-size:var(--cr,clamp(1.8rem,5.4vh,2.7rem));font-weight:850;font-variant-numeric:tabular-nums;line-height:1.1;margin-top:4px;background:linear-gradient(90deg,#86efac,#fde68a 120%);-webkit-background-clip:text;background-clip:text;color:transparent;word-break:break-all}
   .calc-res.err{background:none;-webkit-text-fill-color:#fca5a5;color:#fca5a5;font-size:1.3rem}
   .calc-res.pop{animation:calcPop .35s cubic-bezier(.2,.9,.3,1.3)}
   @keyframes calcPop{0%{transform:scale(.9);filter:brightness(1.6)}100%{transform:scale(1);filter:none}}
-  .calc-grid{position:relative;display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px}
-  .calc-k{position:relative;overflow:hidden;height:64px;border-radius:20px;border:1px solid rgba(255,255,255,.12);background:linear-gradient(180deg,rgba(255,255,255,.12),rgba(255,255,255,.04));color:var(--text);font-size:1.35rem;font-weight:750;cursor:pointer;box-shadow:0 6px 14px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.14);transition:transform .12s,box-shadow .2s,background .2s;-webkit-tap-highlight-color:transparent;font-family:inherit}
+  .calc-grid{position:relative;display:grid;grid-template-columns:repeat(4,1fr);gap:var(--cg,clamp(6px,1.3vh,10px));margin-top:clamp(8px,1.8vh,16px)}
+  .calc-k{position:relative;overflow:hidden;height:var(--ck,clamp(38px,calc(13vh - 57px),64px));border-radius:20px;border:1px solid rgba(255,255,255,.12);background:linear-gradient(180deg,rgba(255,255,255,.12),rgba(255,255,255,.04));color:var(--text);font-size:var(--cf,clamp(1.02rem,2.5vh,1.35rem));font-weight:750;cursor:pointer;box-shadow:0 6px 14px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.14);transition:transform .12s,box-shadow .2s,background .2s;-webkit-tap-highlight-color:transparent;font-family:inherit}
   .calc-k:hover{background:linear-gradient(180deg,rgba(255,255,255,.18),rgba(255,255,255,.07))}
   .calc-k:active{transform:scale(.9)}
   .calc-k:focus-visible{outline:3px solid #86efac;outline-offset:2px}
@@ -655,6 +656,13 @@
   .calc-hist button{display:flex;justify-content:space-between;gap:10px;width:100%;padding:9px 12px;border-radius:14px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:var(--muted);cursor:pointer;font-family:inherit;font-size:.9rem;font-variant-numeric:tabular-nums;transition:background .2s,transform .15s;text-align:left}
   .calc-hist button:hover{background:rgba(255,255,255,.1);transform:translateX(-3px)}
   .calc-hist b{color:var(--text)}
+  .calc-s{--ck:42px;--cf:1.05rem;--cs:76px;--cr:1.9rem;--cg:6px}
+  .calc-m{--ck:54px;--cf:1.2rem;--cs:94px;--cr:2.3rem;--cg:8px}
+  .calc-l{--ck:66px;--cf:1.45rem;--cs:120px;--cr:2.9rem;--cg:10px}
+  .calc-sizes{position:relative;display:flex;align-items:center;gap:6px;margin-bottom:10px;font-size:.78rem;color:var(--muted)}
+  .calc-sizes span{margin-right:auto}
+  .calc-sizes button{border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);color:var(--muted);border-radius:999px;padding:4px 11px;font:inherit;font-weight:700;cursor:pointer}
+  .calc-sizes button.on{background:linear-gradient(135deg,#6ee7b7,#10b981);color:#04130c;border-color:transparent}
   .calc-hint{position:relative;text-align:center;color:var(--muted);font-size:.8rem;margin-top:12px}
 </style>
 <link rel="manifest" href="manifest.json">
@@ -2574,12 +2582,15 @@ function renderCalc(){
   if (!box.dataset.ready){
     box.dataset.ready = '1';
     box.innerHTML = `<div class="calc" id="calcCard">
+      <div class="calc-sizes" id="calcSizes"><span>Taille</span>${[['auto','Auto'],['s','S'],['m','M'],['l','L']].map(([v,l]) => `<button data-size="${v}" aria-label="Taille ${l}">${l}</button>`).join('')}</div>
       <div class="calc-screen"><div class="calc-expr" id="calcExpr"></div><div class="calc-res" id="calcRes" aria-live="polite">0</div></div>
       <div class="calc-grid">${CALC_KEYS.map(([k, cls]) => `<button class="calc-k ${cls || ''}" data-k="${esc(k)}" aria-label="${esc(k)}">${esc(k)}</button>`).join('')}</div>
       <div class="calc-hist" id="calcHist"></div>
       <div class="calc-hint">Clavier accepté : chiffres, + − * /, Entrée, Échap</div>
     </div>`;
     box.addEventListener('click', e => {
+      const sz = e.target.closest('[data-size]');
+      if (sz){ LS.set('calcSize', sz.dataset.size); applyCalcSize(); return; }
       const b = e.target.closest('.calc-k'); if (!b) return;
       ripple(b, e); calcPress(b.dataset.k);
     });
@@ -2589,7 +2600,14 @@ function renderCalc(){
       CALC.expr = b.dataset.h; calcUpdate(true);
     });
   }
+  applyCalcSize();
   calcUpdate(false);
+}
+function applyCalcSize(){
+  const v = LS.get('calcSize', 'auto'), card = $('#calcCard'); if (!card) return;
+  card.classList.remove('calc-s', 'calc-m', 'calc-l');
+  if (v !== 'auto') card.classList.add('calc-' + v);
+  document.querySelectorAll('#calcSizes [data-size]').forEach(b => b.classList.toggle('on', b.dataset.size === v));
 }
 function ripple(btn, e){
   const r = btn.getBoundingClientRect(), s = document.createElement('span');
@@ -3608,5 +3626,5 @@ function setJacques(score){
   box.style.display = 'flex';
 }
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4a0d87e58f9d0aa',t:'MTc5MTkyMDczNw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4a0e0892eca2068',t:'MTc5MTkyMTA2Ng=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
