@@ -720,6 +720,24 @@
   .hz-chip em{font-style:normal;font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;background:rgba(0,0,0,.22);padding:3px 8px;border-radius:999px}
   @keyframes alertIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
   @keyframes alertPulse{0%{box-shadow:0 0 0 0 rgba(239,68,68,.75)}70%{box-shadow:0 0 0 24px rgba(239,68,68,0)}100%{box-shadow:0 0 0 0 rgba(239,68,68,0)}}
+
+  /* v25 — magasin, quantités, pur coins */
+  .store-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:16px 0 4px;padding:16px 18px;border-radius:16px;border:2px solid #34d399;background:linear-gradient(135deg,rgba(52,211,153,.2),rgba(16,185,129,.06));box-shadow:0 0 0 4px rgba(52,211,153,.12)}
+  .store-banner small{display:block;text-transform:uppercase;letter-spacing:.08em;font-size:.7rem;color:#6ee7b7;font-weight:800}
+  .store-banner b{display:block;font-size:1.3rem;color:#ecfdf5}
+  .store-banner span{font-size:.85rem;color:var(--muted)}
+  .store-banner .btn{flex:none;white-space:nowrap;border-radius:999px}
+  .store-banner.none{border:1px dashed var(--border);background:transparent;box-shadow:none;justify-content:center;color:var(--muted);font-size:.9rem}
+  .sbadge{display:inline-block;padding:3px 9px;border-radius:8px;font-weight:900;font-size:.8rem;letter-spacing:.02em;vertical-align:middle;line-height:1.3}
+  .sbadge.big{font-size:1.25rem;padding:6px 14px;border-radius:10px;margin-bottom:6px}
+  .store-grid .chip.on{box-shadow:0 0 0 2px rgba(52,211,153,.5);font-weight:800}
+  .cat-chips{display:flex;flex-wrap:wrap;gap:8px}
+  .qty{display:inline-flex;align-items:center;border:1px solid var(--border);border-radius:999px;overflow:hidden;margin:6px 0 0}
+  .qty button{background:transparent;border:0;color:var(--text);padding:5px 12px;cursor:pointer;font-size:1rem}
+  .qty b{min-width:28px;text-align:center}
+  .coin-pill{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:999px;background:rgba(251,191,36,.14);border:1px solid rgba(251,191,36,.5);color:#fde68a;font-weight:800}
+  .shop-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border:1px solid var(--border);border-radius:14px;margin-top:8px;background:var(--card)}
+  .shop-item small{color:var(--muted);display:block}
 </style>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#06120e">
@@ -826,10 +844,12 @@
     </div>
     <div class="store-pick reveal">
       <div class="store-grid" id="storeGrid"></div>
+      <div id="storeBanner"></div>
       <div class="store-search">
         <input id="storeQ" placeholder="Rechercher un produit, ex. chips Lay's nature" maxlength="80">
         <button class="btn" onclick="searchStore()">Voir les produits</button>
       </div>
+      <div id="storeCats"></div>
       <p class="hint" id="storeStatus">Source : base collaborative Open Food Facts. Elle indique qu’un produit est référencé dans l’enseigne, pas son stock du jour.</p>
       <div id="storeResults"></div>
       <div class="store-actions">
@@ -1003,6 +1023,7 @@
       <div class="hz-alert" id="hzAlert" style="display:none"></div>
       <div class="profile-alert" id="profileAlert"></div>
 <div class="ro-actions">
+  <span class="qty" id="addQty"><button onclick="stepAdd(-1)" aria-label="Moins">−</button><b id="addQtyN">1</b><button onclick="stepAdd(1)" aria-label="Plus">+</button></span>
   <button class="btn btn-sm" id="addBasketBtn" onclick="toggleBasket()">＋ Ajouter au panier</button>
   <button class="btn btn-sm ghost" onclick="shareResult()">↗ Partager</button>
   <button class="btn btn-sm ghost" onclick="openReport()">⚠ Signaler une erreur</button>
@@ -1096,7 +1117,7 @@
 <div class="dr-scrim" id="drScrim" onclick="closeDrawer()"></div>
 <aside class="drawer" id="drawer" aria-label="Mon espace" aria-hidden="true">
   <div class="dr-head">
-    <div><div class="kicker">Mon espace</div><h3>Panier Pur</h3></div>
+    <div><div class="kicker">Mon espace</div><h3 id="drTitle">Panier Pur</h3></div>
     <button class="x" onclick="closeDrawer()" aria-label="Fermer">✕</button>
   </div>
   <div class="tabs">
@@ -1119,6 +1140,7 @@
         </div>
       </div>
       <div id="basketList"></div>
+      <div id="shopBox"></div>
       <div style="display:flex;gap:10px;margin-top:22px;flex-wrap:wrap">
         <button class="btn btn-sm" onclick="exportCSV()">⬇ Exporter (CSV)</button>
         <button class="btn btn-sm ghost" onclick="clearBasket()">Vider le panier</button>
@@ -1331,6 +1353,7 @@ function colorFor(v){
    6. SCANNER (caméra + saisie)
    ========================================================= */
 let stream=null, detectTimer=null, zxingControls=null, busy=false, hintTimer=null;
+let addQty = 1;
 /* v18 — iPhone : lecteur ZXing limité aux codes produits, essai plus poussé, aide après 6 s */
 function makeZxingReader(){
   const hints = new Map();
@@ -2004,6 +2027,7 @@ async function scanCode(code, catId){
   const a0 = soundFill(2.3);
   runFill(target, 2300, ()=>{
     showStamp(r.score, r.hasHigh);
+    awardPure(code, r.score);
     showHazardAlert(r.list, r.score, r.breakdown, r.parts);
     soundVerdict(r.score);
     celebrate(r.score);
@@ -2077,6 +2101,7 @@ function applyProfile(r){
 
 /* --- Données du produit courant --- */
 function onProductRendered(p, r, code){
+  addQty = 1; $('#addQtyN').textContent = 1;
   const hits = r.list.filter(h => h.personal);
   lastResult = {
     code, name: p.product_name_fr || p.product_name || p.generic_name || 'Produit',
@@ -2100,10 +2125,57 @@ function onProductRendered(p, r, code){
   v6Product(p, r, code);
 }
 
+/* --- v25 : pur coins (monnaie virtuelle gratuite, aucune valeur d'achat) --- */
+const PURE_REWARD = 10;
+const SHOP = [
+  {id:'t1', kind:'title', name:'Pur Explorateur',   price:30,  desc:'Titre affiché dans votre espace'},
+  {id:'t2', kind:'title', name:'Gardien du panier', price:80,  desc:'Titre affiché dans votre espace'},
+  {id:'t3', kind:'title', name:'Champion Pur',      price:150, desc:'Titre affiché dans votre espace'},
+  {id:'g1', kind:'gold',  name:'Confettis dorés',   price:60,  desc:'Célébration dorée à chaque produit pur'}
+];
+const COIN = {
+  get(){ return LS.get('coins', {balance:0, seen:{}, owned:[], eq:{title:'', gold:false}}); },
+  save(c){ LS.set('coins', c); renderCoins(); }
+};
+function awardPure(code, score){
+  if (score === null || score > 30 || !code) return;
+  const c = COIN.get(); if (c.seen[code]) return;     // une récompense par produit
+  c.seen[code] = true; c.balance += PURE_REWARD; COIN.save(c);
+  toast(`+${PURE_REWARD} 🪙 produit pur scanné !`);
+}
+function buyItem(id){
+  const c = COIN.get(), it = SHOP.find(x => x.id === id);
+  if (!it || c.owned.includes(id)) return;
+  if (c.balance < it.price){ toast('Pas assez de pur coins'); return; }
+  c.balance -= it.price; c.owned.push(id); COIN.save(c); toast(`Acheté : ${it.name}`);
+}
+function equipItem(id){
+  const c = COIN.get(), it = SHOP.find(x => x.id === id);
+  if (!it || !c.owned.includes(id)) return;
+  if (it.kind === 'title') c.eq.title = c.eq.title === it.name ? '' : it.name;
+  if (it.kind === 'gold') c.eq.gold = !c.eq.gold;
+  COIN.save(c);
+}
+function renderCoins(){
+  const c = COIN.get();
+  const t = $('#drTitle'); if (t) t.textContent = c.eq.title || 'Panier Pur';
+  const box = $('#shopBox'); if (!box) return;
+  box.innerHTML = `<div style="margin-top:26px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+      <div><div class="kicker">Boutique</div><p class="sub" style="font-size:.85rem">Gagnez ${PURE_REWARD} 🪙 à chaque produit pur scanné (une fois par produit).</p></div>
+      <span class="coin-pill">🪙 ${c.balance}</span></div>
+    ${SHOP.map(it => {
+      const owned = c.owned.includes(it.id);
+      const on = it.kind === 'title' ? c.eq.title === it.name : c.eq.gold;
+      const btn = !owned ? `<button class="btn btn-sm" onclick="buyItem('${it.id}')">${it.price} 🪙</button>`
+        : `<button class="btn btn-sm ${on?'':'ghost'}" onclick="equipItem('${it.id}')">${on ? '✓ Équipé' : 'Équiper'}</button>`;
+      return `<div class="shop-item"><div><b>${esc(it.name)}</b><small>${esc(it.desc)}</small></div>${btn}</div>`;
+    }).join('')}`;
+}
+
 /* --- Panier --- */
 const inBasket = code => basket.some(b => b.code === code);
 function updateFab(){
-  $('#fabCount').textContent = basket.length;
+  $('#fabCount').textContent = basket.reduce((a,b) => a + (b.qty || 1), 0);
   const f = $('#fab'); f.classList.remove('pulse'); void f.offsetWidth; f.classList.add('pulse');
 }
 function updateAddBtn(){
@@ -2119,13 +2191,20 @@ function toggleBasket(){
     toast('Retiré du panier');
   } else {
     const { list, ...rest } = lastResult;
-    basket.unshift({ ...rest, hz: list.length, hzNames: list.filter(h => h.s !== 'low').map(h => h.n), added: Date.now() });
-    toast('Ajouté au panier 🧺');
+    basket.unshift({ ...rest, qty: addQty, hz: list.length, hzNames: list.filter(h => h.s !== 'low').map(h => h.n), added: Date.now() });
+    toast(`Ajouté au panier 🧺 (× ${addQty})`);
+    setTimeout(() => openDrawer('basket'), 900);
     const b = $('#addBasketBtn').getBoundingClientRect(), pb = $('#roPanel').getBoundingClientRect();
     burst(b.left - pb.left + b.width/2, b.top - pb.top + b.height/2, ['#6ee7b7','#34d399','#fde68a'], 26);
   }
   LS.set('basket', basket);
   updateFab(); updateAddBtn(); renderBasket();
+}
+function stepAdd(d){ addQty = Math.max(1, Math.min(99, addQty + d)); $('#addQtyN').textContent = addQty; }
+function changeQty(code, d){
+  const it = basket.find(b => b.code === code); if (!it) return;
+  it.qty = Math.max(1, Math.min(99, (it.qty || 1) + d));
+  LS.set('basket', basket); updateFab(); renderBasket();
 }
 function removeFromBasket(code){
   basket = basket.filter(b => b.code !== code);
@@ -2142,14 +2221,17 @@ function itemHTML(b, i){
   const c = b.score === null ? '#64748b' : colorFor(b.score);
   return `<div class="li" style="--d:${i*.05}s">
       ${b.img ? `<img src="${esc(b.img)}" alt="">` : '<div class="ph">📦</div>'}
-      <div class="meta"><b>${esc(b.name)}</b><small>${esc(b.brand || '')}</small></div>
+      <div class="meta"><b>${esc(b.name)}</b><small>${esc(b.brand || '')}</small>
+        <div class="qty"><button onclick="changeQty('${b.code}',-1)" aria-label="Moins">−</button><b>${b.qty || 1}</b><button onclick="changeQty('${b.code}',1)" aria-label="Plus">+</button></div></div>
       <div class="score-chip" style="background:${c}">${b.score === null ? '—' : b.score}</div>
       <button class="rm" title="Retirer" onclick="removeFromBasket('${b.code}')">✕</button>
     </div>`;
 }
 function renderBasket(){
+  renderCoins();
   const scored = basket.filter(b => b.score !== null);
-  const avg = scored.length ? Math.round(scored.reduce((a,b) => a + b.score, 0) / scored.length) : null;
+  const wsum = scored.reduce((a,b) => a + (b.qty || 1), 0);
+  const avg = scored.length ? Math.round(scored.reduce((a,b) => a + b.score * (b.qty || 1), 0) / wsum) : null;
   const bad = basket.filter(b => b.score !== null && b.score > 60);
   const col = avg === null ? '#64748b' : colorFor(avg);
   const g = $('#gaugeFg');
@@ -2159,8 +2241,9 @@ function renderBasket(){
   const vtxt = !basket.length ? 'Panier vide' : avg === null ? 'Scores indisponibles' : `Panier ${avg<=30?'pur':avg<=60?'à améliorer':'toxique'}`;
   $('#basketVerdict').textContent = vtxt;
   $('#basketVerdict').style.color = basket.length ? col : 'var(--text)';
+  const units = basket.reduce((a,b) => a + (b.qty || 1), 0);
   $('#basketSub').textContent = basket.length
-    ? `${basket.length} produit${basket.length>1?'s':''}${bad.length ? ` · ${bad.length} à remplacer en priorité` : ''}`
+    ? `${units} article${units>1?'s':''} · ${basket.length} produit${basket.length>1?'s':''}${bad.length ? ` · ${bad.length} à remplacer en priorité` : ''}`
     : 'Ajoutez des produits depuis un résultat de scan.';
   $('#basketList').innerHTML = basket.length
     ? [...basket].sort((a,b) => (b.score ?? -1) - (a.score ?? -1)).map(itemHTML).join('')
@@ -2168,8 +2251,8 @@ function renderBasket(){
 }
 function exportCSV(){
   if (!basket.length){ toast('Panier vide'); return; }
-  const rows = [['EAN','Produit','Marque','Score (0-100)','Verdict','Nutri-Score','NOVA','Substances signalées'],
-    ...basket.map(b => [b.code, b.name, b.brand, b.score ?? '', verdictFor(b.score, b.hasHigh).label, (b.grade||'').toUpperCase(), b.nova || '', (b.hzNames||[]).join(' | ')])];
+  const rows = [['EAN','Produit','Marque','Quantité','Score (0-100)','Verdict','Nutri-Score','NOVA','Substances signalées'],
+    ...basket.map(b => [b.code, b.name, b.brand, b.qty || 1, b.score ?? '', verdictFor(b.score, b.hasHigh).label, (b.grade||'').toUpperCase(), b.nova || '', (b.hzNames||[]).join(' | ')])];
   const csv = '\uFEFF' + rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(';')).join('\r\n');
   const url = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8'}));
   const a = document.createElement('a');
@@ -2317,7 +2400,7 @@ function celebrate(score){
   if (score === null) return;
   const st = $('#stamp'), pb = $('#roPanel').getBoundingClientRect(), sr = st.getBoundingClientRect();
   const x = sr.left - pb.left + sr.width/2, y = sr.top - pb.top + sr.height/2;
-  if (score <= 30) burst(x, y, ['#22c55e','#6ee7b7','#fde68a','#ffffff'], 46);
+  if (score <= 30) burst(x, y, COIN.get().eq.gold ? ['#fbbf24','#fde68a','#f59e0b','#ffffff'] : ['#22c55e','#6ee7b7','#fde68a','#ffffff'], 46);
   else if (score <= 60) burst(x, y, ['#f59e0b','#fde68a'], 20);
   else {
     burst(x, y, ['#ef4444','#f97316','#fecaca'], 60);
@@ -3005,30 +3088,68 @@ window.addEventListener('keydown', e => {
    ========================================================= */
 const STORE_FIELDS = 'code,product_name,product_name_fr,brands,image_front_small_url,nutriscore_grade,nova_group,ingredients_text,additives_tags,categories_tags,nutriments,labels_tags,allergens_tags';
 const STORES = [
-  {id:'carrefour',   name:'Carrefour', tag:'carrefour'},
-  {id:'leclerc',     name:'E.Leclerc', tag:'leclerc'},
-  {id:'auchan',      name:'Auchan',    tag:'auchan'},
-  {id:'intermarche', name:'Intermarché', tag:'intermarche'},
-  {id:'lidl',        name:'Lidl',      tag:'lidl'},
-  {id:'monoprix',    name:'Monoprix',  tag:'monoprix'},
-  {id:'superu',      name:'Super U',   tag:'magasins-u'},
-  {id:'aldi',        name:'Aldi',      tag:'aldi'}
+  {id:'carrefour',   name:'Carrefour',   tag:'carrefour',   c:'#004e9f', f:'#ffffff'},
+  {id:'leclerc',     name:'E.Leclerc',   tag:'leclerc',     c:'#0a3a8c', f:'#ffffff'},
+  {id:'auchan',      name:'Auchan',      tag:'auchan',      c:'#e2001a', f:'#ffffff'},
+  {id:'intermarche', name:'Intermarché', tag:'intermarche', c:'#e30613', f:'#ffed00'},
+  {id:'lidl',        name:'Lidl',        tag:'lidl',        c:'#0050aa', f:'#fff12e'},
+  {id:'monoprix',    name:'Monoprix',    tag:'monoprix',    c:'#ffffff', f:'#e2001a'},
+  {id:'superu',      name:'Super U',     tag:'magasins-u',  c:'#1e3a8a', f:'#fbbf24'},
+  {id:'aldi',        name:'Aldi',        tag:'aldi',        c:'#00549f', f:'#ffffff'}
 ];
+/* v26 — badge d'enseigne (aux couleurs de l'enseigne, texte seul : pas de logo protégé) */
+function storeBadge(s, big){
+  return `<span class="sbadge${big?' big':''}" style="background:${s.c};color:${s.f}${s.c==='#ffffff'?';box-shadow:inset 0 0 0 2px #e2001a':''}">${esc(s.name)}</span>`;
+}
 function currentStore(){ const id = LS.get('store', null); return STORES.find(s => s.id === id) || null; }
+const STORE_CATS = [
+  ['Boissons','beverages'], ['Chips et snacks','chips'], ['Pâtes à tartiner','hazelnut-spreads'], ['Biscuits','biscuits'],
+  ['Céréales','breakfast-cereals'], ['Yaourts','yogurts'], ['Chocolat','chocolates'], ['Conserves','canned-foods'],
+  ['Pâtes et riz','pastas'], ['Surgelés','frozen-foods']
+];
 function renderStores(){
   const cur = LS.get('store', null);
-  $('#storeGrid').innerHTML = STORES.map(s => `<button class="chip ${s.id===cur?'on':''}" data-store="${s.id}" onclick="pickStore('${s.id}')">${s.name}</button>`).join('');
+  $('#storeGrid').innerHTML = STORES.map(s => `<button class="chip ${s.id===cur?'on':''}" data-store="${s.id}" onclick="pickStore('${s.id}')">${s.id===cur?'✓ ':''}${storeBadge(s,false)}</button>`).join('');
+  const s = currentStore();
+  $('#storeBanner').innerHTML = s
+    ? `<div class="store-banner"><div>${storeBadge(s,true)}<small>Magasin sélectionné</small><span>Recherches et alternatives filtrées sur cette enseigne.</span></div><button class="btn btn-sm ghost" onclick="pickStore('${s.id}')">Retirer</button></div>`
+    : `<div class="store-banner none"><span>Aucun magasin choisi : touchez votre enseigne ci-dessus.</span></div>`;
+  $('#storeCats').innerHTML = s
+    ? `<p class="hint" style="margin:14px 0 8px">Parcourir le catalogue ${esc(s.name)} :</p><div class="cat-chips">${STORE_CATS.map(([l,t]) => `<button class="chip" onclick="browseCat('${esc(l)}','${t}')">${esc(l)}</button>`).join('')}</div>`
+    : '';
 }
 function pickStore(id){
-  const next = LS.get('store', null) === id ? null : id;   // un second clic désélectionne
+  const next = LS.get('store', null) === id ? null : id;   // un second clic retire le magasin
   LS.set('store', next);
   renderStores();
   const s = currentStore();
   $('#storeResults').innerHTML = '';
   $('#storeStatus').textContent = s
-    ? `Magasin choisi : ${s.name}. Recherchez un produit pour voir son offre, et les alternatives après chaque scan seront d’abord celles de ce magasin.`
+    ? `Magasin choisi : ${s.name}. Parcourez le catalogue par rayon ou recherchez un produit.`
     : 'Aucun magasin choisi : les alternatives proposées sont générales.';
-  if (s) $('#storeQ').focus();
+}
+async function browseCat(label, tag){
+  const s = currentStore();
+  if (!s){ toast('Choisissez d’abord votre magasin'); return; }
+  $('#storeStatus').textContent = `Catalogue ${s.name} · ${label}…`;
+  $('#storeResults').innerHTML = '';
+  try{
+    const list = await offSearch(`stores_tags=${s.tag}&tagtype_0=categories&tag_contains_0=contains&tag_0=${tag}&page_size=40&fields=${STORE_FIELDS}`);
+    const scored = list
+      .filter(x => x.code && x.product_name)
+      .map(x => ({x, s: analyze(x).score}))
+      .filter(o => o.s !== null)
+      .sort((a, b) => a.s - b.s)
+      .slice(0, 12);
+    if (!scored.length){
+      $('#storeStatus').textContent = `Aucun produit « ${label} » référencé chez ${s.name} dans la base collaborative.`;
+      return;
+    }
+    $('#storeStatus').textContent = `${label} chez ${s.name} : ${scored.length} produit(s), du plus sain au moins sain.`;
+    $('#storeResults').innerHTML = `<div class="alt-grid">${scored.map(altCard).join('')}</div>`;
+  }catch(e){
+    $('#storeStatus').textContent = 'Catalogue indisponible pour le moment (Open Food Facts surchargé). Réessayez dans un instant.';
+  }
 }
 
 /* Requête Open Food Facts avec un nouvel essai (le service répond parfois 503) */
@@ -3171,6 +3292,6 @@ function setJacques(score){
   box.style.display = 'flex';
 }
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4a05b4d4c2d9a29',t:'MTc5MTkxNTYwOQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4a078f46b953c98',t:'MTc5MTkxNjgyMw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>
 
 </body></html>
