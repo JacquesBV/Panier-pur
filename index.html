@@ -1011,6 +1011,8 @@ body:has(#tab-shop.on) .dr-solde{display:none}
   .ch-form input.shake{animation:chShake .35s}
   @keyframes chShake{20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
   .ch-ans{font-weight:900;color:var(--btn-a);letter-spacing:.04em}
+  /* v64 — catalogue : mention d'enseigne non confirmée */
+  .conf-no{display:block;color:var(--muted);font-size:.72rem;margin-top:2px}
 </style>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#06120e">
@@ -4228,10 +4230,15 @@ function showTab(t){
 /* --- Alternatives plus saines (classées par notre score) --- */
 function altCard(o, i){
   const x = o.x, name = x.product_name_fr || x.product_name || 'Produit';
+  const sc = (o.s === undefined) ? analyze(x).score : o.s;
+  const chip = sc === null ? '<span class="score-chip" style="background:#64748b;padding:6px 10px;min-width:auto">—</span><small>sans score</small>'
+                           : `<span class="score-chip" style="background:${colorFor(sc)};padding:6px 10px;min-width:auto">${sc}</span><small>/100</small>`;
+  const conf = o.conf === false ? '<small class="conf-no">Enseigne non confirmée</small>' : '';
   return `<div class="alt" style="--d:${i*.08}s">
       ${x.image_front_small_url ? `<img src="${esc(x.image_front_small_url)}" alt="">` : '<div class="ph">📦</div>'}
       <b>${esc(name)}</b><small>${esc(x.brands || '')}</small>
-      <div class="row"><span class="score-chip" style="background:${colorFor(o.s)};padding:6px 10px;min-width:auto">${o.s}</span><small>/100</small></div>
+      <div class="row">${chip}</div>
+      ${conf}
       <button class="btn btn-sm" onclick="scanCode('${x.code}')">Analyser</button>
     </div>`;
 }
@@ -4938,7 +4945,7 @@ window.addEventListener('keydown', e => {
 /* =========================================================
    15. V8 : MAGASIN, ALTERNATIVES PAR ENSEIGNE, SON
    ========================================================= */
-const STORE_FIELDS = 'code,product_name,product_name_fr,brands,image_front_small_url,nutriscore_grade,nova_group,ingredients_text,additives_tags,categories_tags,nutriments,labels_tags,allergens_tags';
+const STORE_FIELDS = 'code,product_name,product_name_fr,brands,stores,countries_tags,image_front_small_url,nutriscore_grade,nova_group,ingredients_text,additives_tags,categories_tags,nutriments,labels_tags,allergens_tags';
 const STORES = [
   {id:'carrefour',   name:'Carrefour',   tag:'carrefour',   c:'#004e9f', f:'#ffffff'},
   {id:'leclerc',     name:'E.Leclerc',   tag:'leclerc',     c:'#0a3a8c', f:'#ffffff'},
@@ -4955,7 +4962,7 @@ function storeBadge(s, big){
 }
 function currentStore(){ const id = LS.get('store', null); return STORES.find(s => s.id === id) || null; }
 const STORE_CATS = [
-  ['Boissons',['jus','soda','eau aromatisée','boisson']], ['Chips et snacks',['chips','tortilla','snacks apéritif','biscuits apéritifs']],
+  ['Boissons',['coca-cola','pepsi','oasis','fanta','sprite','orangina','schweppes','ice tea','limonade','soda','jus d’orange','nectar','eau aromatisée']], ['Eaux',['eau minérale','eau de source','eau gazeuse','evian','volvic','cristaline','badoit','perrier','vittel','contrex']], ['Chips et snacks',['chips','tortilla','snacks apéritif','biscuits apéritifs']],
   ['Pâtes à tartiner',['pâte à tartiner','noisette cacao']], ['Biscuits',['biscuits','cookies','sablés']],
   ['Céréales',['céréales petit-déjeuner','muesli']], ['Yaourts',['yaourt','yaourts nature','skyr']],
   ['Chocolat',['chocolat','tablette chocolat']], ['Conserves',['conserve','haricots','thon']],
@@ -4982,47 +4989,72 @@ function pickStore(id){
     ? `Magasin choisi : ${s.name}. Parcourez le catalogue par rayon ou recherchez un produit.`
     : 'Aucun magasin choisi : les alternatives proposées sont générales.';
 }
+/* v64 — catalogue par enseigne : requêtes avec et sans tag magasin, plus de produits écartés */
+const CAT_BATCH = 4;
+async function storeFetch(s, terms, onProgress){
+  const jobs = [];
+  terms.forEach(t => {
+    const enc = encodeURIComponent(t);
+    jobs.push({ tag: true,  q: `search_terms=${enc}&stores_tags=${s.tag}&page_size=50&fields=${STORE_FIELDS}` });
+    jobs.push({ tag: false, q: `search_terms=${enc}&page_size=100&fields=${STORE_FIELDS}` });
+  });
+  const cleanS = cleanName(s.name);
+  const seen = new Map(); let ok = 0, done = 0;
+  for (let i = 0; i < jobs.length; i += CAT_BATCH){
+    const part = jobs.slice(i, i + CAT_BATCH);
+    const res = await Promise.allSettled(part.map(j => offSearch(j.q)));
+    res.forEach((r, k) => {
+      done++;
+      if (r.status !== 'fulfilled') return;
+      ok++;
+      r.value.forEach(x => {
+        if (!x.code || !x.product_name) return;
+        const conf = part[k].tag || cleanName(String(x.stores || '')).includes(cleanS);
+        const prev = seen.get(x.code);
+        if (!prev || (conf && !prev.conf)) seen.set(x.code, { x, conf });
+      });
+    });
+    if (onProgress) onProgress(done, jobs.length);
+  }
+  return { ok, total: jobs.length, items: [...seen.values()] };
+}
+/* Tri : enseigne confirmée, puis produits français, puis du plus sain au moins sain (sans score en dernier) */
+function storeRank(items){
+  return items
+    .map(o => ({ ...o, s: analyze(o.x).score, fr: (o.x.countries_tags || []).includes('en:france') }))
+    .sort((a, b) => (b.conf - a.conf) || (b.fr - a.fr) || ((a.s ?? 999) - (b.s ?? 999)));
+}
 async function browseCat(label){
   const s = currentStore();
   if (!s){ toast('Choisissez d’abord votre magasin'); return; }
   const terms = (STORE_CATS.find(c => c[0] === label) || [label, [label]])[1];
-  $('#storeStatus').textContent = `Catalogue ${s.name} · ${label}… (recherche dans plusieurs bases)`;
   $('#storeResults').innerHTML = '';
-  const key = 'pp.cat.' + s.id + '.' + fold(label);
+  $('#storeStatus').textContent = `Catalogue ${s.name} · ${label}… (0 / ${terms.length * 2} requêtes)`;
+  const key = 'pp.cat2.' + s.id + '.' + fold(label);
   try{
-    // Une requête par mot-clé, en parallèle ; chaque requête a ses propres nouveaux essais
-    const batches = await Promise.allSettled(terms.map(t => offSearch(`search_terms=${encodeURIComponent(t)}&stores_tags=${s.tag}&page_size=50&fields=${STORE_FIELDS}`)));
-    const seen = new Map(); let ok = 0;
-    batches.forEach(b => { if (b.status === 'fulfilled'){ ok++; b.value.forEach(x => { if (x.code && x.product_name && !seen.has(x.code)) seen.set(x.code, x); }); } });
-    if (!ok && batches.length){
+    const r = await storeFetch(s, terms, (d, t) => { $('#storeStatus').textContent = `Catalogue ${s.name} · ${label}… (${d} / ${t} requêtes)`; });
+    if (!r.ok){
       const cached = LS.get(key, null);
       if (cached){ renderCat(s, label, cached, ' (résultats mis en cache)'); return; }
       $('#storeStatus').textContent = 'Catalogue indisponible pour le moment (Open Food Facts surchargé). Réessayez dans un instant.';
       return;
     }
-    // Garder les produits dont la fiche confirme l'enseigne (évite les faux positifs)
-    const cleanS = cleanName(s.name);
-    const list = [...seen.values()].filter(x => cleanName(String(x.stores || '')).includes(cleanS) || String(x.stores || '') === '');
-    const scored = list
-      .map(x => ({x, s: analyze(x).score}))
-      .filter(o => o.s !== null)
-      .sort((a, b) => a.s - b.s)
-      .slice(0, 24)
-      .map(o => o.x);
-    LS.set(key, scored);
-    renderCat(s, label, scored, '');
+    const list = storeRank(r.items).slice(0, 150);
+    LS.set(key, list.slice(0, 60).map(o => ({ x: o.x, conf: o.conf })));
+    renderCat(s, label, list, '');
   }catch(e){
     $('#storeStatus').textContent = 'Catalogue indisponible pour le moment (Open Food Facts surchargé). Réessayez dans un instant.';
   }
 }
 function renderCat(s, label, list, note){
   if (!list.length){
-    $('#storeStatus').textContent = `Aucun produit « ${label} » avec une composition exploitable chez ${s.name} dans les bases consultées.`;
+    $('#storeStatus').textContent = `Aucun produit « ${label} » trouvé dans les bases consultées.`;
     return;
   }
-  const scored = list.map(x => ({x, s: analyze(x).score})).sort((a, b) => a.s - b.s);
-  $('#storeStatus').textContent = `${label} chez ${s.name} : ${scored.length} produit(s), du plus sain au moins sain${note}.`;
-  $('#storeResults').innerHTML = `<div class="alt-grid">${scored.map(altCard).join('')}</div>`;
+  const items = list.map(o => ({ ...o, s: analyze(o.x).score }));
+  const confirmed = items.filter(o => o.conf).length;
+  $('#storeStatus').textContent = `${label} : ${items.length} produit(s), dont ${confirmed} référencé(s) chez ${s.name} et ${items.length - confirmed} autre(s) marque(s) (enseigne non confirmée)${note}.`;
+  $('#storeResults').innerHTML = `<div class="alt-grid">${items.map(altCard).join('')}</div>`;
 }
 
 /* Requête Open Food Facts avec un nouvel essai (le service répond parfois 503) */
@@ -5043,22 +5075,17 @@ async function searchStore(){
   const s = currentStore();
   if (!s){ toast('Choisissez d’abord votre magasin'); return; }
   if (q.length < 2){ toast('Saisissez au moins 2 lettres, ex. chips'); return; }
-  $('#storeStatus').textContent = `Recherche de « ${q} » chez ${s.name}…`;
   $('#storeResults').innerHTML = '';
+  $('#storeStatus').textContent = `Recherche de « ${q} » chez ${s.name}…`;
   try{
-    const list = await offSearch(`search_terms=${encodeURIComponent(q)}&stores_tags=${s.tag}&page_size=40&fields=${STORE_FIELDS}`);
-    const scored = list
-      .filter(x => x.code && x.product_name)
-      .map(x => ({x, s: analyze(x).score}))
-      .filter(o => o.s !== null)
-      .sort((a, b) => a.s - b.s)
-      .slice(0, 12);
-    if (!scored.length){
-      $('#storeStatus').textContent = `Aucun produit trouvé chez ${s.name} pour « ${q} ». La base est collaborative : essayez un terme plus général.`;
+    const r = await storeFetch(s, [q], (d, t) => { $('#storeStatus').textContent = `Recherche de « ${q} » chez ${s.name}… (${d} / ${t})`; });
+    if (!r.ok) throw new Error('offline');
+    const list = storeRank(r.items).slice(0, 150);
+    if (!list.length){
+      $('#storeStatus').textContent = `Aucun produit trouvé pour « ${q} ». La base est collaborative : essayez un terme plus général.`;
       return;
     }
-    $('#storeStatus').textContent = `${scored.length} produit(s) trouvé(s) chez ${s.name}, du plus sain au moins sain.`;
-    $('#storeResults').innerHTML = `<div class="alt-grid">${scored.map(altCard).join('')}</div>`;
+    renderCat(s, `« ${q} »`, list, '');
   }catch(e){
     $('#storeStatus').textContent = 'Recherche indisponible pour le moment (service Open Food Facts surchargé). Réessayez dans un instant.';
   }
@@ -5166,5 +5193,5 @@ function setJacques(score){
 }
 </script>
 <script>updateSolde(); document.addEventListener('DOMContentLoaded', updateSolde);</script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4a4ec04a9ff0218',t:'MTc5MTk2MzQ3OQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4a4fbd4acaa3ca1',t:'MTc5MTk2NDEyNw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
