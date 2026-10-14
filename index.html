@@ -2740,7 +2740,8 @@ function cwWinCheck(){
 /* v61 — codes promo */
 const PROMO_CODES = {
   kabrak77: { unlimited: true, label: 'Crédits illimités activés' },
-  filemoidelatune: { add: 2000, label: '+2000 pièces' }
+  filemoidelatune: { add: 2000, label: '+2000 pièces' },
+  resetcoins: { reset: true, label: 'Pièces remises à zéro' }
 };
 function redeemPromo(e){
   e.preventDefault();
@@ -2750,10 +2751,14 @@ function redeemPromo(e){
   const promo = Object.prototype.hasOwnProperty.call(PROMO_CODES, code) ? PROMO_CODES[code] : null;
   if (!promo){ sfx('error'); msg.textContent = 'Code inconnu.'; return; }
   const c = COIN.get();
-  if (c.promos[code]){ sfx('error'); msg.textContent = 'Ce code a déjà été utilisé.'; return; }
-  c.promos[code] = true;
-  if (promo.add) c.balance += promo.add;
-  if (promo.unlimited) c.unlimited = true;
+  if (promo.reset){
+    c.balance = 0; c.unlimited = false;
+  } else {
+    if (c.promos[code]){ sfx('error'); msg.textContent = 'Ce code a déjà été utilisé.'; return; }
+    c.promos[code] = true;
+    if (promo.add) c.balance += promo.add;
+    if (promo.unlimited) c.unlimited = true;
+  }
   COIN.save(c); sfx('coin');
   msg.textContent = promo.label + ' ✓';
   inp.value = '';
@@ -5193,5 +5198,5 @@ function setJacques(score){
 }
 </script>
 <script>updateSolde(); document.addEventListener('DOMContentLoaded', updateSolde);</script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4a4fbd4acaa3ca1',t:'MTc5MTk2NDEyNw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</body>
 </html>
