@@ -985,13 +985,13 @@ body:has(#tab-shop.on) .dr-solde{display:none}
 .cw-cell input{width:100%;height:100%;background:transparent;border:0;outline:none;text-align:center;font-weight:800;font-size:16px;color:#ecfdf5;text-transform:uppercase;padding:0;caret-color:var(--btn-a);font-family:inherit}
 .cw-msg{min-height:1.4em;text-align:center;margin:8px 0;color:var(--btn-a);font-weight:700}
 .cw-actions{display:flex;gap:8px;justify-content:center;margin-bottom:12px}
-.cw-clues{display:grid;grid-template-columns:1fr;gap:10px;font-size:.9rem}
+.cw-clues{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;font-size:.9rem}
 .cw-clues h4{margin:4px 0;color:var(--btn-a)}
 .cw-clues ul{list-style:none;padding:0;margin:0}
 .cw-cl{padding:6px 8px;border-radius:8px;cursor:pointer;line-height:1.35}
 .cw-cl:hover{background:rgba(255,255,255,.05)}
 .cw-cl.act{background:rgba(var(--mint-rgb),.2)}
-@media (min-width:560px){ .cw-clues{grid-template-columns:1fr 1fr} }
+@media (min-width:560px){ .cw-clues{grid-template-columns:minmax(0,1fr) minmax(0,1fr)} }
   /* v60 — panier : balancement doux, vague sans trou, outils du résultat hors du panier sur mobile */
   .sway{transform-box:view-box;transform-origin:150px 306px;animation:sway 6s ease-in-out infinite}
   @keyframes sway{0%,100%{transform:rotate(-2deg)}50%{transform:rotate(2deg)}}
@@ -1000,6 +1000,17 @@ body:has(#tab-shop.on) .dr-solde{display:none}
   .promo-form{display:flex;gap:8px;margin:0 0 6px}
   .promo-form input{flex:1;min-width:0;padding:10px 12px;border-radius:12px;border:1px solid rgba(var(--mint-rgb),.35);background:rgba(255,255,255,.05);color:var(--text,#ecfdf5);font:inherit}
   .promo-msg{min-height:1.3em;font-weight:700;color:var(--btn-a);margin-bottom:8px}
+  /* v62 — charades santé */
+  .ch-list{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
+  .ch-card{position:relative;min-width:0;overflow-wrap:anywhere;padding:12px 12px 12px 48px;border-radius:14px;background:rgba(255,255,255,.05);border:1px solid rgba(var(--mint-rgb),.25)}
+  .ch-card.ok{border-color:var(--btn-b);background:rgba(16,185,129,.12)}
+  .ch-no{position:absolute;left:12px;top:12px;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-weight:900;font-size:.85rem;background:rgba(var(--mint-rgb),.2);color:var(--btn-a)}
+  .ch-txt{margin:0 0 10px;line-height:1.45;font-size:.95rem}
+  .ch-form{display:flex;gap:8px}
+  .ch-form input{flex:1;min-width:0;padding:9px 12px;border-radius:12px;border:1px solid rgba(var(--mint-rgb),.35);background:rgba(0,0,0,.25);color:#ecfdf5;font:inherit;text-transform:uppercase;font-size:16px}
+  .ch-form input.shake{animation:chShake .35s}
+  @keyframes chShake{20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
+  .ch-ans{font-weight:900;color:var(--btn-a);letter-spacing:.04em}
 </style>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#06120e">
@@ -1103,6 +1114,11 @@ body:has(#tab-shop.on) .dr-solde{display:none}
     <div class="cw-ico" aria-hidden="true">🧩</div>
     <div><h2>Mots croisés santé</h2><p>Remplissez les grilles sur l’alimentation et gagnez des pièces. 5 niveaux, de 20 à 40 🪙 chacun.</p><small id="cwHomeStatus" class="cw-hs">0 / 5 niveaux terminés</small></div>
     <button class="btn" onclick="openCrossword()">Jouer</button>
+  </div>
+  <div class="cw-card" style="margin-top:14px">
+    <div class="cw-ico" aria-hidden="true">🎭</div>
+    <div><h2>Charades santé</h2><p>Devinez le mot à partir de ses deux syllabes. 5 niveaux, de 15 à 35 🪙 chacun.</p><small id="chHomeStatus" class="cw-hs">0 / 5 niveaux terminés</small></div>
+    <button class="btn" onclick="openCharades()">Jouer</button>
   </div>
 </section>
 
@@ -2741,6 +2757,90 @@ function redeemPromo(e){
   inp.value = '';
   toast(promo.label);
 }
+/* v62 — charades santé : 5 niveaux, récompense en pièces (une fois par niveau) */
+const CH_LEVELS = [{"n": 1, "reward": 15, "items": [{"id": "poisson", "text": "Mon premier se cultive en gousses. Mon second est ce qu’on entend quand on écoute. Mon tout vit dans l’eau et se mange.", "answer": "POISSON"}, {"id": "orange", "text": "Mon premier est un métal précieux. Mon second est un être ailé du ciel. Mon tout est un agrume.", "answer": "ORANGE"}]}, {"n": 2, "reward": 20, "items": [{"id": "abricot", "text": "Mon premier protège de la pluie. Mon second est un petit lit pour bébé. Mon tout est un fruit d’été à noyau.", "answer": "ABRICOT"}, {"id": "biscuit", "text": "Mon premier est le cri qu’on lance au théâtre pour demander un rappel. Mon second est le participe passé de cuire. Mon tout accompagne le thé.", "answer": "BISCUIT"}, {"id": "bonbon", "text": "Mon premier veut dire agréable. Mon second le répète. Mon tout est une friandise.", "answer": "BONBON"}]}, {"n": 3, "reward": 25, "items": [{"id": "poireau", "text": "Mon premier est un fruit à pépins. Mon second est la contraction de « à le ». Mon tout est un légume vert de la famille de l’ail.", "answer": "POIREAU"}, {"id": "pruneau", "text": "Mon premier est un fruit à noyau. Mon second est la contraction de « à le ». Mon tout est un fruit séché.", "answer": "PRUNEAU"}, {"id": "potage", "text": "Mon premier est un récipient de cuisine. Mon second est le temps vécu. Mon tout est une soupe.", "answer": "POTAGE"}]}, {"n": 4, "reward": 30, "items": [{"id": "choucroute", "text": "Mon premier est un légume. Mon second est la partie dure du pain. Mon tout est un plat fermenté d’Alsace.", "answer": "CHOUCROUTE"}, {"id": "galette", "text": "Mon premier est un caillou plat, au bord de la mer. Mon second est un pronom personnel. Mon tout est une pâtisserie plate bretonne.", "answer": "GALETTE"}, {"id": "entrecote", "text": "Mon premier signifie « au milieu de ». Mon second est une partie de la cage thoracique. Mon tout est un morceau de bœuf.", "answer": "ENTRECOTE"}]}, {"n": 5, "reward": 35, "items": [{"id": "vitamine", "text": "Mon premier signifie « vie » en latin. Mon second est l’apparence d’une personne, comme dans « bonne … ». Mon tout est un micronutriment.", "answer": "VITAMINE"}, {"id": "millefeuille", "text": "Mon premier est un nombre. Mon second est une feuille. Mon tout est un dessert feuilleté à la crème.", "answer": "MILLEFEUILLE"}]}];
+function chData(){ const c = COIN.get(); c.charades = c.charades || {}; c.charades.done = c.charades.done || {}; c.charades.solved = c.charades.solved || {}; return c; }
+function chLevel(n){ return CH_LEVELS.find(l => l.n === n); }
+function renderChHome(){ const el = document.getElementById('chHomeStatus'); if (!el) return; const d = chData().charades.done; el.textContent = `${CH_LEVELS.filter(l => d[l.n]).length} / ${CH_LEVELS.length} niveaux terminés`; }
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', renderChHome); else renderChHome();
+function chChip(l, done){
+  const unlocked = l.n === 1 || done[l.n - 1];
+  const cls = done[l.n] ? 'done' : (unlocked ? '' : 'lock');
+  const label = done[l.n] ? '✓ ' : (unlocked ? '' : '🔒 ');
+  return `<button class="cw-chip ${cls}" ${unlocked ? '' : 'disabled'} data-n="${l.n}" onclick="chLoad(${l.n})">${label}Niveau ${l.n} · ${l.reward} 🪙</button>`;
+}
+function chMsg(t){ const m = document.getElementById('chMsg'); if (m) m.textContent = t || ''; }
+function openCharades(n){
+  closeCharades(true);
+  const done = chData().charades.done;
+  const start = n || (CH_LEVELS.find(l => !done[l.n]) || CH_LEVELS[0]).n;
+  const ov = document.createElement('div');
+  ov.id = 'chOv'; ov.className = 'cw-ov';
+  ov.innerHTML = `<div class="cw-box" role="dialog" aria-modal="true" aria-label="Charades santé">
+    <div class="cw-top"><b>🎭 Charades santé</b><button class="cw-x" aria-label="Fermer" onclick="closeCharades()">×</button></div>
+    <div class="cw-levels" id="chChips"></div>
+    <div id="chMsg" class="cw-msg" aria-live="polite"></div>
+    <div id="chList" class="ch-list"></div>
+  </div>`;
+  document.body.appendChild(ov);
+  document.body.style.overflow = 'hidden';
+  ov.addEventListener('click', e => { if (e.target === ov) closeCharades(); });
+  document.addEventListener('keydown', chEsc);
+  chLoad(start);
+}
+function closeCharades(silent){
+  const ov = document.getElementById('chOv');
+  if (ov) ov.remove();
+  document.body.style.overflow = '';
+  document.removeEventListener('keydown', chEsc);
+  renderChHome();
+}
+function chEsc(e){ if (e.key === 'Escape') closeCharades(); }
+function chLoad(n){
+  const lvl = chLevel(n); if (!lvl) return;
+  const c = chData(), done = c.charades.done, solved = c.charades.solved;
+  if (!(n === 1 || done[n - 1])){ chMsg(`Terminez le niveau ${n - 1} pour débloquer celui-ci.`); return; }
+  document.getElementById('chChips').innerHTML = CH_LEVELS.map(l => chChip(l, done)).join('');
+  document.querySelectorAll('#chChips .cw-chip').forEach(b => b.classList.toggle('cur', +b.dataset.n === n));
+  document.getElementById('chList').innerHTML = lvl.items.map((it, i) => {
+    const ok = !!solved[it.id];
+    return `<div class="ch-card${ok ? ' ok' : ''}">
+      <div class="ch-no">${i + 1}</div>
+      <p class="ch-txt">${esc(it.text)}</p>
+      ${ok ? `<div class="ch-ans">✓ ${esc(it.answer)}</div>`
+           : `<form class="ch-form" onsubmit="chCheck(event,${n},'${it.id}')"><input maxlength="30" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Votre réponse"><button class="btn btn-sm" type="submit">Valider</button></form>`}
+    </div>`;
+  }).join('');
+  chMsg(done[n] ? 'Niveau déjà récompensé. Vous pouvez le refaire pour le plaisir.' : 'Trouvez le mot de chaque charade.');
+}
+function chCheck(e, n, id){
+  e.preventDefault();
+  const lvl = chLevel(n), it = lvl.items.find(x => x.id === id);
+  const inp = e.target.querySelector('input');
+  if (!it || !inp) return;
+  if (cwNorm(inp.value) !== cwNorm(it.answer)){
+    sfx('error'); chMsg('Pas tout à fait. Essayez encore !');
+    inp.classList.remove('shake'); void inp.offsetWidth; inp.classList.add('shake');
+    return;
+  }
+  const c = chData();
+  c.charades.solved[id] = true;
+  let paid = false;
+  const allSolved = lvl.items.every(x => c.charades.solved[x.id]);
+  if (allSolved && !c.charades.done[n]){ c.charades.done[n] = true; c.balance += lvl.reward; paid = true; }
+  COIN.save(c);
+  sfx(paid ? 'coin' : 'buy');
+  chLoad(n);
+  if (paid){
+    const next = CH_LEVELS.find(l => l.n === n + 1);
+    chMsg(`Bravo ! +${lvl.reward} 🪙` + (next ? ` Le niveau ${next.n} est débloqué.` : ' Vous avez terminé toutes les charades !'));
+    toast(`+${lvl.reward} 🪙 charades niveau ${n}`);
+    renderChHome();
+  } else {
+    chMsg('Bonne réponse ✓');
+  }
+}
+
 function awardPure(code, score){
   if (score === null || score > 30 || !code) return;
   const c = COIN.get(); if (c.seen[code]) return;     // une récompense par produit
@@ -5066,5 +5166,5 @@ function setJacques(score){
 }
 </script>
 <script>updateSolde(); document.addEventListener('DOMContentLoaded', updateSolde);</script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4a4d90ef8aa9edf',t:'MTc5MTk2MjcwMw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4a4ec04a9ff0218',t:'MTc5MTk2MzQ3OQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
