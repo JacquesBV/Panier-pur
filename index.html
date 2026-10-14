@@ -992,6 +992,10 @@ body:has(#tab-shop.on) .dr-solde{display:none}
 .cw-cl:hover{background:rgba(255,255,255,.05)}
 .cw-cl.act{background:rgba(var(--mint-rgb),.2)}
 @media (min-width:560px){ .cw-clues{grid-template-columns:1fr 1fr} }
+  /* v60 — panier : balancement doux, vague sans trou, outils du résultat hors du panier sur mobile */
+  .sway{transform-box:view-box;transform-origin:150px 306px;animation:sway 6s ease-in-out infinite}
+  @keyframes sway{0%,100%{transform:rotate(-2deg)}50%{transform:rotate(2deg)}}
+  @media (max-width:640px){ .ro-tools{position:static;justify-content:flex-end;margin-bottom:4px} }
 </style>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#06120e">
@@ -1236,30 +1240,44 @@ body:has(#tab-shop.on) .dr-solde{display:none}
                   <stop id="s3" offset="1" stop-color="#14532d"/>
                 </linearGradient>
                 <linearGradient id="wickerG" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0" stop-color="#e2b07a"/><stop offset="1" stop-color="#9a6234"/>
+                  <stop offset="0" stop-color="#f3cb93"/><stop offset=".45" stop-color="#c58a4e"/><stop offset="1" stop-color="#6e4120"/>
                 </linearGradient>
+                <linearGradient id="bodyG" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0" stop-color="#ffffff" stop-opacity=".22"/><stop offset=".3" stop-color="#ffffff" stop-opacity=".03"/>
+                  <stop offset=".75" stop-color="#ffffff" stop-opacity=".05"/><stop offset="1" stop-color="#000000" stop-opacity=".35"/>
+                </linearGradient>
+                <pattern id="weave" width="12" height="12" patternUnits="userSpaceOnUse">
+                  <path d="M0 6 H12 M6 0 V12" stroke="#b97a3e" stroke-width="3" opacity=".5"/>
+                  <path d="M0 4.6 H12 M4.6 0 V12" stroke="#f6d7a4" stroke-width=".8" opacity=".35"/>
+                </pattern>
+                <filter id="softBlur" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3"/></filter>
               </defs>
-              <!-- anse -->
-              <path d="M118 140 Q118 30 155 30 Q192 30 192 140" fill="none" stroke="url(#wickerG)" stroke-width="13" stroke-linecap="round"/>
-              <!-- corps du panier -->
-              <path d="M92 132 H218 L204 296 Q202 306 190 306 H120 Q108 306 106 296 Z" fill="rgba(255,255,255,.05)"/>
-              <!-- liquide (remplissage couleur) -->
-              <g clip-path="url(#vialClip)">
-                <g id="liquid" transform="translate(0 300)" class="fill-glow">
-                  <g class="wave"><path d="M-220 0 q27.5 -12 55 0 t55 0 t55 0 t55 0 t55 0 t55 0 t55 0 t55 0 V460 H-220 Z" fill="url(#liqGrad)"/></g>
-                  <g class="wave b"><path d="M-220 6 q27.5 10 55 0 t55 0 t55 0 t55 0 t55 0 t55 0 t55 0 t55 0 V460 H-220 Z" fill="#fff" opacity=".12"/></g>
-                  <g id="bubbles"></g>
+              <!-- ombre au sol -->
+              <ellipse cx="150" cy="314" rx="78" ry="8" fill="#000" opacity=".5" filter="url(#softBlur)"/>
+              <g id="basketSway" class="sway">
+                <!-- anse : ombre puis osier -->
+                <path d="M118 138 Q116 34 155 34 Q194 34 192 138" fill="none" stroke="#000" stroke-width="15" stroke-linecap="round" opacity=".35" transform="translate(2 4)"/>
+                <path d="M118 138 Q116 34 155 34 Q194 34 192 138" fill="none" stroke="url(#wickerG)" stroke-width="13" stroke-linecap="round"/>
+                <path d="M121 128 Q120 42 150 40" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".4"/>
+                <!-- corps : verre translucide -->
+                <path d="M92 132 H218 L204 296 Q202 306 190 306 H120 Q108 306 106 296 Z" fill="rgba(255,255,255,.05)"/>
+                <g clip-path="url(#vialClip)">
+                  <g id="liquid" transform="translate(0 300)" class="fill-glow">
+                    <g class="wave"><path d="M-110 0 q27.5 -10 55 0 t55 0 t55 0 t55 0 t55 0 t55 0 t55 0 t55 0 t55 0 t55 0 V460 H-110 Z" fill="url(#liqGrad)"/></g>
+                    <g class="wave b"><path d="M-110 6 q27.5 8 55 0 t55 0 t55 0 t55 0 t55 0 t55 0 t55 0 t55 0 t55 0 t55 0 V460 H-110 Z" fill="#fff" opacity=".16"/></g>
+                    <g id="bubbles"></g>
+                  </g>
+                  <rect x="80" y="120" width="150" height="200" fill="url(#bodyG)"/>
+                  <rect x="80" y="120" width="150" height="200" fill="url(#weave)"/>
                 </g>
+                <!-- reflets -->
+                <path d="M104 162 L112 282" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".28"/>
+                <path d="M201 160 L198 262" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".18"/>
+                <!-- bord en osier -->
+                <rect x="80" y="126" width="150" height="18" rx="9" fill="url(#wickerG)" stroke="#4a2a10" stroke-width="1.5"/>
+                <rect x="86" y="128" width="138" height="4" rx="2" fill="#fff" opacity=".4"/>
+                <rect x="84" y="140" width="142" height="4" rx="2" fill="#000" opacity=".22"/>
               </g>
-              <!-- tressage -->
-              <g fill="none" stroke="#7a4a22" stroke-width="2" opacity=".4">
-                <path d="M93.5 150 H216.5 M95.4 172 H214.6 M97.3 194 H212.7 M99.2 216 H210.8 M101.1 238 H208.9 M102.9 260 H207.1 M104.8 282 H205.2"/>
-                <path d="M110 132 L119 296 M132 132 L137.1 296 M155 132 L155 296 M178 132 L172.9 296 M200 132 L190 296"/>
-              </g>
-              <!-- reflet -->
-              <path d="M104 162 L112 282" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".25"/>
-              <!-- bord du panier -->
-              <rect x="82" y="124" width="146" height="16" rx="8" fill="url(#wickerG)" stroke="#5c3a1a" stroke-width="1.5"/>
               <!-- graduations gauche -->
               <g id="ticks"></g>
               <!-- zones (bande droite) -->
@@ -5014,5 +5032,5 @@ function setJacques(score){
 }
 </script>
 <script>updateSolde(); document.addEventListener('DOMContentLoaded', updateSolde);</script>
-</body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4a4cbdee95e782a',t:'MTc5MTk2MjE2Mw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
