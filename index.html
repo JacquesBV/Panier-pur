@@ -1013,6 +1013,28 @@ body:has(#tab-shop.on) .dr-solde{display:none}
   .ch-ans{font-weight:900;color:var(--btn-a);letter-spacing:.04em}
   /* v64 — catalogue : mention d'enseigne non confirmée */
   .conf-no{display:block;color:var(--muted);font-size:.72rem;margin-top:2px}
+  /* v66 — PANIER BOY : console rétro */
+  .pb-ov{position:fixed;inset:0;z-index:950;background:rgba(8,6,16,.84);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:12px;overflow-y:auto}
+  .pb-shell{width:min(92vw,330px);background:linear-gradient(160deg,#e2ddea,#b3acc6);border-radius:14px 14px 60px 14px;padding:14px 16px 18px;box-shadow:inset 0 -7px 0 #8a83a0,0 22px 44px rgba(0,0,0,.6);color:#2d2846}
+  .pb-top{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .pb-brand{font-weight:900;letter-spacing:.14em;font-size:.78rem}
+  .pb-led{width:9px;height:9px;border-radius:50%;background:#e11d48;box-shadow:0 0 8px #f43f5e;animation:pbLed 1.6s infinite}
+  @keyframes pbLed{50%{opacity:.35}}
+  .pb-x{margin-left:auto;background:#2d2846;color:#fff;border:0;border-radius:999px;width:28px;height:28px;cursor:pointer;font-size:1rem;line-height:1}
+  .pb-screen{background:#5b4f7a;border-radius:10px 10px 36px 10px;padding:14px 14px 18px}
+  .pb-screen canvas{display:block;width:100%;height:auto;aspect-ratio:160/144;image-rendering:pixelated;image-rendering:crisp-edges;border:3px solid #2d2846;border-radius:3px}
+  .pb-label{font-size:.6rem;letter-spacing:.22em;text-align:center;margin:9px 0 12px;color:#4b4469;font-weight:800}
+  .pb-pad{display:flex;justify-content:space-between;align-items:center;padding:0 4px}
+  .pb-dpad{display:flex;gap:6px}
+  .pb-ab{display:flex;gap:14px;transform:rotate(-18deg)}
+  .pb-btn{border:0;border-radius:999px;background:#2d2846;color:#fff;font-weight:900;cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none;font-family:inherit}
+  .pb-dpad .pb-btn{width:54px;height:54px;border-radius:12px;font-size:1.2rem}
+  .pb-ab .pb-btn{width:56px;height:56px;font-size:1.05rem}
+  .pb-ab .pb-a{background:#9d2a52}
+  .pb-ab .pb-b{background:#9d2a52}
+  .pb-btn:active{transform:scale(.94)}
+  .pb-start{display:flex;justify-content:center;margin-top:14px}
+  .pb-start .pb-btn{padding:7px 16px;border-radius:999px;background:#5f5878;font-size:.62rem;letter-spacing:.14em}
 </style>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#06120e">
@@ -1121,6 +1143,11 @@ body:has(#tab-shop.on) .dr-solde{display:none}
     <div class="cw-ico" aria-hidden="true">🎭</div>
     <div><h2>Charades santé</h2><p>Devinez le mot à partir de ses deux syllabes. 5 niveaux, de 15 à 35 🪙 chacun.</p><small id="chHomeStatus" class="cw-hs">0 / 5 niveaux terminés</small></div>
     <button class="btn" onclick="openCharades()">Jouer</button>
+  </div>
+  <div class="cw-card" style="margin-top:14px">
+    <div class="cw-ico" aria-hidden="true">🕹️</div>
+    <div><h2>PANIER BOY</h2><p>Un mini-jeu rétro : attrapez fruits et légumes, évitez les additifs. 4 niveaux, de 15 à 40 🪙 chacun.</p><small id="pbHomeStatus" class="cw-hs">0 / 4 niveaux terminés</small></div>
+    <button class="btn" onclick="openPB()">Jouer</button>
   </div>
 </section>
 
@@ -2846,6 +2873,252 @@ function chCheck(e, n, id){
   } else {
     chMsg('Bonne réponse ✓');
   }
+}
+
+/* v66 — PANIER BOY : mini-jeu rétro façon console portable. 4 niveaux, récompense une fois par niveau. */
+const PB_PAL = ['#9bbc0f', '#8bac0f', '#306230', '#0f380f'];
+const PB_LEVELS = [
+  { n: 1, name: 'LES FRUITS',     goal: 10, speed: 0.7,  every: 70, bad: 0.15, reward: 15, drift: false },
+  { n: 2, name: 'LES LEGUMES',    goal: 14, speed: 0.95, every: 60, bad: 0.25, reward: 20, drift: false },
+  { n: 3, name: 'LES ADDITIFS',   goal: 18, speed: 1.2,  every: 50, bad: 0.35, reward: 25, drift: false },
+  { n: 4, name: 'LE SUPERMARCHE', goal: 22, speed: 1.5,  every: 42, bad: 0.4,  reward: 40, drift: true }
+];
+const PB_FONT = {
+  'A':['.#.','#.#','###','#.#','#.#'], 'B':['##.','#.#','##.','#.#','##.'], 'C':['.##','#..','#..','#..','.##'],
+  'D':['##.','#.#','#.#','#.#','##.'], 'E':['###','#..','##.','#..','###'], 'F':['###','#..','##.','#..','#..'],
+  'G':['.##','#..','#.#','#.#','.##'], 'H':['#.#','#.#','###','#.#','#.#'], 'I':['###','.#.','.#.','.#.','###'],
+  'J':['..#','..#','..#','#.#','.#.'], 'K':['#.#','#.#','##.','#.#','#.#'], 'L':['#..','#..','#..','#..','###'],
+  'M':['#.#','###','###','#.#','#.#'], 'N':['##.','#.#','#.#','#.#','#.#'], 'O':['.#.','#.#','#.#','#.#','.#.'],
+  'P':['##.','#.#','##.','#..','#..'], 'Q':['.#.','#.#','#.#','###','..#'], 'R':['##.','#.#','##.','#.#','#.#'],
+  'S':['.##','#..','.#.','..#','##.'], 'T':['###','.#.','.#.','.#.','.#.'], 'U':['#.#','#.#','#.#','#.#','###'],
+  'V':['#.#','#.#','#.#','#.#','.#.'], 'W':['#.#','#.#','###','###','#.#'], 'X':['#.#','#.#','.#.','#.#','#.#'],
+  'Y':['#.#','#.#','.#.','.#.','.#.'], 'Z':['###','..#','.#.','#..','###'],
+  '0':['###','#.#','#.#','#.#','###'], '1':['.#.','##.','.#.','.#.','###'], '2':['##.','..#','.#.','#..','###'],
+  '3':['##.','..#','.##','..#','##.'], '4':['#.#','#.#','###','..#','..#'], '5':['###','#..','##.','..#','##.'],
+  '6':['.##','#..','###','#.#','###'], '7':['###','..#','.#.','.#.','.#.'], '8':['###','#.#','###','#.#','###'],
+  '9':['###','#.#','###','..#','##.'],
+  '!':['.#.','.#.','.#.','...','.#.'], '+':['...','.#.','###','.#.','...'], '-':['...','...','###','...','...'],
+  '/':['..#','..#','.#.','#..','#..'], ':':['...','.#.','...','.#.','...'], '.':['...','...','...','...','.#.'],
+  '?':['##.','..#','.#.','...','.#.'], ' ':['...','...','...','...','...']
+};
+const PB_HEART = ['##.##', '#####', '#####', '.###.', '..#..'];
+const PB = { ov: null, ctx: null, raf: 0, kd: null, ku: null, st: 'title', stT: 0, tick: 0, lvl: 1, score: 0, lives: 3,
+  items: [], bx: 72, frame: 0, keys: { left: false, right: false }, press: { a: false }, earned: 0, reward: 0 };
+
+function pbRect(x, y, w, h, c){ PB.ctx.fillStyle = PB_PAL[c]; PB.ctx.fillRect(Math.round(x), Math.round(y), w, h); }
+function pbText(s, x, y, c, sc){
+  sc = sc || 1; let cx = x;
+  for (const ch of String(s).toUpperCase()){
+    const g = PB_FONT[ch] || PB_FONT['?'];
+    for (let r = 0; r < 5; r++) for (let k = 0; k < 3; k++) if (g[r][k] === '#') pbRect(cx + k * sc, y + r * sc, sc, sc, c);
+    cx += 4 * sc;
+  }
+}
+function pbCenter(s, y, c, sc){ sc = sc || 1; const w = String(s).length * 4 * sc - sc; pbText(s, Math.round((160 - w) / 2), y, c, sc); }
+function pbCircle(cx, cy, r, c){
+  const R = Math.ceil(r);
+  for (let y = -R; y <= R; y++) for (let x = -R; x <= R; x++) if (x * x + y * y <= r * r) pbRect(cx + x, cy + y, 1, 1, c);
+}
+function pbDrawApple(x, y){ pbCircle(x + 4, y + 5, 3.6, 3); pbRect(x + 2, y + 3, 1, 2, 1); pbRect(x + 4, y, 1, 2, 2); pbRect(x + 5, y, 2, 1, 2); }
+function pbDrawCarrot(x, y){
+  for (let r = 2; r <= 8; r++){ const half = Math.round((8 - r) / 2); for (let d = -half; d <= half; d++) pbRect(x + 4 + d, y + r, 1, 1, 2); }
+  pbRect(x + 3, y, 1, 2, 3); pbRect(x + 5, y, 1, 2, 3); pbRect(x + 4, y + 1, 1, 1, 3);
+}
+function pbDrawBroc(x, y){ pbRect(x + 4, y + 5, 2, 4, 1); pbCircle(x + 2.5, y + 3, 2.3, 2); pbCircle(x + 6.5, y + 3, 2.3, 2); pbCircle(x + 4.5, y + 2.5, 2.8, 2); }
+function pbDrawBad(x, y){ pbCircle(x + 5, y + 5, 5, 3); pbText('E', x + 4, y + 3, 0); }
+function pbDrawBasket(x, y){
+  pbRect(x + 3, y - 4, 10, 1, 3); pbRect(x + 3, y - 3, 1, 3, 3); pbRect(x + 12, y - 3, 1, 3, 3);
+  pbRect(x, y, 16, 2, 3);
+  for (let i = 0; i < 7; i++){
+    const w = 16 - 2 * i;
+    pbRect(x + i, y + 2 + i, w, 1, 2);
+    for (let k = 0; k < w; k++) if ((k + i) % 3 === 0) pbRect(x + i + k, y + 2 + i, 1, 1, 3);
+  }
+}
+function pbHeart(x, y, c){ PB_HEART.forEach((row, r) => { for (let k = 0; k < row.length; k++) if (row[k] === '#') pbRect(x + k, y + r, 1, 1, c); }); }
+function pbBox(){ pbRect(18, 38, 124, 68, 3); pbRect(21, 41, 118, 62, 0); }
+
+function pbSet(st){ PB.st = st; PB.stT = 0; }
+function pbResetLevel(){ PB.score = 0; PB.lives = 3; PB.items = []; PB.bx = 72; PB.frame = 0; }
+function pbSpawn(L){
+  const bad = Math.random() < L.bad;
+  const kinds = ['apple', 'carrot', 'broc'];
+  const kind = bad ? 'bad' : kinds[Math.floor(Math.random() * kinds.length)];
+  const s = bad ? 11 : 9;
+  PB.items.push({ kind, bad, s, x: 4 + Math.random() * (152 - s), y: 12 - s, v: L.speed * (0.8 + Math.random() * 0.4), ph: Math.random() * 60 });
+}
+function pbReward(n){
+  const c = COIN.get(); c.pb = c.pb || { done: {} };
+  if (c.pb.done[n]) return 0;
+  c.pb.done[n] = true; c.balance += PB_LEVELS[n - 1].reward; COIN.save(c);
+  return PB_LEVELS[n - 1].reward;
+}
+function pbClear(L){
+  PB.reward = pbReward(L.n); PB.earned += PB.reward;
+  pbSet('clear');
+  sfx(PB.reward ? 'coin' : 'buy');
+  renderPbHome();
+}
+function pbAction(){
+  if (PB.st === 'title'){
+    const d = (COIN.get().pb || { done: {} }).done;
+    PB.lvl = (PB_LEVELS.find(l => !d[l.n]) || PB_LEVELS[0]).n;
+    PB.earned = 0; pbResetLevel(); pbSet('intro');
+  } else if (PB.st === 'clear'){
+    if (PB.lvl < 4){ PB.lvl++; pbResetLevel(); pbSet('intro'); } else pbSet('end');
+  } else if (PB.st === 'over'){ pbResetLevel(); pbSet('intro'); }
+  else if (PB.st === 'end'){ pbSet('title'); }
+}
+function pbUpdate(){
+  PB.stT++;
+  if (PB.press.a){ PB.press.a = false; pbAction(); }
+  if (PB.st === 'intro'){ if (PB.stT > 100) pbSet('play'); return; }
+  if (PB.st !== 'play') return;
+  const L = PB_LEVELS[PB.lvl - 1];
+  if (PB.keys.left) PB.bx -= 2.2;
+  if (PB.keys.right) PB.bx += 2.2;
+  PB.bx = Math.max(0, Math.min(144, PB.bx));
+  PB.frame++;
+  if (PB.frame % L.every === 0) pbSpawn(L);
+  PB.items = PB.items.filter(it => {
+    it.y += it.v;
+    if (L.drift) it.x += Math.sin((PB.frame + it.ph) / 18) * 0.7;
+    it.x = Math.max(0, Math.min(160 - it.s, it.x));
+    const hit = it.y + it.s >= 126 && it.y <= 134 && it.x + it.s > PB.bx && it.x < PB.bx + 16;
+    if (hit){
+      if (it.bad){ PB.lives--; sfx('error'); }
+      else { PB.score++; sfx('buy'); }
+      return false;
+    }
+    return it.y < 144;
+  });
+  if (PB.score >= L.goal){ pbClear(L); return; }
+  if (PB.lives <= 0){ pbSet('over'); sfx('error'); }
+}
+function pbDrawTitle(){
+  pbCenter('PANIER', 22, 3, 2);
+  pbCenter('BOY', 42, 3, 2);
+  pbDrawApple(22, 78); pbDrawCarrot(72, 82); pbDrawBad(122, 78);
+  if ((PB.tick >> 5) % 2 === 0) pbCenter('APPUYEZ SUR A', 106, 3);
+  pbCenter('PUR EDITION', 124, 2);
+}
+function pbDrawEnd(){
+  pbCenter('BRAVO', 26, 3, 2);
+  pbCenter('LES 4 NIVEAUX', 58, 3);
+  pbCenter('TOTAL GAGNE', 76, 2);
+  pbCenter(PB.earned + ' PIECES', 90, 3);
+  if ((PB.tick >> 5) % 2 === 0) pbCenter('A : MENU', 124, 2);
+}
+function pbDraw(){
+  pbRect(0, 0, 160, 144, 0);
+  if (PB.st === 'title') return pbDrawTitle();
+  if (PB.st === 'end') return pbDrawEnd();
+  const L = PB_LEVELS[PB.lvl - 1];
+  if (PB.st === 'intro'){
+    pbCenter('NIVEAU ' + PB.lvl, 44, 3, 2);
+    pbCenter(L.name, 80, 3);
+    pbCenter('OBJECTIF ' + L.goal, 96, 2);
+    return;
+  }
+  // terrain défilant
+  pbRect(0, 139, 160, 1, 2);
+  for (let x = 0; x < 20; x++) pbRect((((x * 8) - (PB.frame >> 1)) % 160 + 160) % 160, 141, 2, 1, 2);
+  PB.items.forEach(it => {
+    if (it.bad) pbDrawBad(it.x, it.y);
+    else if (it.kind === 'apple') pbDrawApple(it.x, it.y);
+    else if (it.kind === 'carrot') pbDrawCarrot(it.x, it.y);
+    else pbDrawBroc(it.x, it.y);
+  });
+  pbDrawBasket(Math.round(PB.bx), 126);
+  // ATS (tableau de bord)
+  pbRect(0, 0, 160, 11, 2);
+  pbText('NV ' + PB.lvl, 3, 3, 0);
+  pbCenter(PB.score + '/' + L.goal, 3, 0);
+  for (let i = 0; i < 3; i++) pbHeart(160 - 7 - i * 8, 3, i < PB.lives ? 0 : 3);
+  if (PB.st === 'clear'){
+    pbBox();
+    pbCenter('NIVEAU TERMINE', 47, 3);
+    pbCenter(PB.reward ? '+' + PB.reward + ' PIECES' : 'DEJA GAGNE', 63, 3);
+    pbCenter(PB.lvl < 4 ? 'A : SUIVANT' : 'A : FIN', 86, 2);
+  } else if (PB.st === 'over'){
+    pbBox();
+    pbCenter('GAME OVER', 50, 3, 2);
+    pbCenter('A : REESSAYER', 80, 3);
+  }
+}
+function pbLoop(){
+  PB.raf = requestAnimationFrame(pbLoop);
+  PB.tick++;
+  pbUpdate();
+  pbDraw();
+}
+function pbKeyDown(e){
+  const k = e.key;
+  if (k === 'ArrowLeft'){ PB.keys.left = true; e.preventDefault(); }
+  else if (k === 'ArrowRight'){ PB.keys.right = true; e.preventDefault(); }
+  else if (k === 'z' || k === 'Z' || k === ' ' || k === 'Enter'){ PB.press.a = true; e.preventDefault(); }
+  else if (k === 'Escape') closePB();
+}
+function pbKeyUp(e){
+  if (e.key === 'ArrowLeft') PB.keys.left = false;
+  else if (e.key === 'ArrowRight') PB.keys.right = false;
+}
+function pbBind(){
+  document.querySelectorAll('#pbOv [data-k]').forEach(b => {
+    const k = b.dataset.k;
+    b.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      if (k === 'left' || k === 'right') PB.keys[k] = true;
+      else if (k === 'a' || k === 'start') PB.press.a = true;
+    });
+    const off = () => { if (k === 'left' || k === 'right') PB.keys[k] = false; };
+    b.addEventListener('pointerup', off);
+    b.addEventListener('pointerleave', off);
+    b.addEventListener('pointercancel', off);
+  });
+}
+function renderPbHome(){
+  const el = document.getElementById('pbHomeStatus'); if (!el) return;
+  const d = (COIN.get().pb || { done: {} }).done;
+  el.textContent = `${PB_LEVELS.filter(l => d[l.n]).length} / ${PB_LEVELS.length} niveaux terminés`;
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', renderPbHome); else renderPbHome();
+function openPB(){
+  closePB(true);
+  const ov = document.createElement('div');
+  ov.id = 'pbOv'; ov.className = 'pb-ov';
+  ov.innerHTML = `<div class="pb-shell" role="dialog" aria-modal="true" aria-label="Panier Boy">
+    <div class="pb-top"><span class="pb-led" aria-hidden="true"></span><span class="pb-brand">PANIER BOY</span><button class="pb-x" aria-label="Fermer" onclick="closePB()">×</button></div>
+    <div class="pb-screen"><canvas id="pbCanvas" width="160" height="144"></canvas></div>
+    <div class="pb-label">MODELE PUR · 4 NIVEAUX</div>
+    <div class="pb-pad">
+      <div class="pb-dpad"><button class="pb-btn" data-k="left" aria-label="Gauche">◀</button><button class="pb-btn" data-k="right" aria-label="Droite">▶</button></div>
+      <div class="pb-ab"><button class="pb-btn pb-b" data-k="b" aria-label="B">B</button><button class="pb-btn pb-a" data-k="a" aria-label="A">A</button></div>
+    </div>
+    <div class="pb-start"><button class="pb-btn" data-k="start">START</button></div>
+  </div>`;
+  document.body.appendChild(ov);
+  document.body.style.overflow = 'hidden';
+  PB.ov = ov;
+  PB.ctx = document.getElementById('pbCanvas').getContext('2d');
+  PB.ctx.imageSmoothingEnabled = false;
+  PB.st = 'title'; PB.stT = 0; PB.lvl = 1; PB.tick = 0; PB.earned = 0; PB.reward = 0;
+  PB.keys = { left: false, right: false }; PB.press = { a: false };
+  pbResetLevel();
+  pbBind();
+  PB.kd = pbKeyDown; PB.ku = pbKeyUp;
+  document.addEventListener('keydown', PB.kd);
+  document.addEventListener('keyup', PB.ku);
+  PB.raf = requestAnimationFrame(pbLoop);
+}
+function closePB(silent){
+  cancelAnimationFrame(PB.raf);
+  if (PB.kd) document.removeEventListener('keydown', PB.kd);
+  if (PB.ku) document.removeEventListener('keyup', PB.ku);
+  PB.kd = PB.ku = null;
+  const ov = document.getElementById('pbOv'); if (ov) ov.remove();
+  document.body.style.overflow = '';
+  renderPbHome();
 }
 
 function awardPure(code, score){
@@ -5198,5 +5471,5 @@ function setJacques(score){
 }
 </script>
 <script>updateSolde(); document.addEventListener('DOMContentLoaded', updateSolde);</script>
-</body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4a9491daeb99ef0',t:'MTc5MjAwOTIzNg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
