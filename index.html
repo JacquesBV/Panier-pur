@@ -996,6 +996,10 @@ body:has(#tab-shop.on) .dr-solde{display:none}
   .sway{transform-box:view-box;transform-origin:150px 306px;animation:sway 6s ease-in-out infinite}
   @keyframes sway{0%,100%{transform:rotate(-2deg)}50%{transform:rotate(2deg)}}
   @media (max-width:640px){ .ro-tools{position:static;justify-content:flex-end;margin-bottom:4px} }
+  /* v61 — formulaire de code promo */
+  .promo-form{display:flex;gap:8px;margin:0 0 6px}
+  .promo-form input{flex:1;min-width:0;padding:10px 12px;border-radius:12px;border:1px solid rgba(var(--mint-rgb),.35);background:rgba(255,255,255,.05);color:var(--text,#ecfdf5);font:inherit}
+  .promo-msg{min-height:1.3em;font-weight:700;color:var(--btn-a);margin-bottom:8px}
 </style>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#06120e">
@@ -1435,7 +1439,14 @@ body:has(#tab-shop.on) .dr-solde{display:none}
         <button class="btn btn-sm ghost" onclick="clearBasket()">Vider le panier</button>
       </div>
     </section>
-    <section class="tabpane" id="tab-shop"><div id="shopBox"></div></section>
+    <section class="tabpane" id="tab-shop">
+      <form class="promo-form" onsubmit="redeemPromo(event)" autocomplete="off">
+        <input id="promoIn" type="text" placeholder="Code promo" maxlength="40" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Code promo">
+        <button class="btn btn-sm" type="submit">Valider</button>
+      </form>
+      <div id="promoMsg" class="promo-msg" aria-live="polite"></div>
+      <div id="shopBox"></div>
+    </section>
     <section class="tabpane" id="tab-shopping"><div id="shopList"></div></section>
     <section class="tabpane" id="tab-sac"><div id="sacBox"></div></section>
     <section class="tabpane" id="tab-calc"><div id="calcBox"></div></section>
@@ -2507,11 +2518,12 @@ const SHOP = [
   {id:'th2', kind:'theme', theme:'gold',  name:'Thème Or',    price:250, desc:'Accents dorés sur tout le site'},
   {id:'g1',  kind:'gold',  name:'Confettis dorés', price:60, desc:'Célébration dorée à chaque produit pur'}
 ];
-function updateSolde(){ const b = COIN.get().balance; document.querySelectorAll('.solde-live').forEach(el => el.textContent = b); }
+function updateSolde(){ const c = COIN.get(); const b = c.unlimited ? '∞' : c.balance; document.querySelectorAll('.solde-live').forEach(el => el.textContent = b); }
 const COIN = {
   get(){
     const d = LS.get('coins', {});
-    d.balance = d.balance || 0; d.seen = d.seen || {}; d.owned = d.owned || []; d.goals = d.goals || {};
+    d.balance = d.balance || 0; d.seen = d.seen || {}; d.owned = d.owned || []; d.goals = d.goals || {}; d.promos = d.promos || {};
+    if (d.unlimited) d.balance = Math.max(d.balance, 999999);
     d.eq = Object.assign({title:'', gold:false, theme:''}, d.eq || {});
     return d;
   },
@@ -2707,6 +2719,28 @@ function cwWinCheck(){
   return true;
 }
 
+/* v61 — codes promo */
+const PROMO_CODES = {
+  kabrak77: { unlimited: true, label: 'Crédits illimités activés' },
+  filemoidelatune: { add: 2000, label: '+2000 pièces' }
+};
+function redeemPromo(e){
+  e.preventDefault();
+  const inp = document.getElementById('promoIn'), msg = document.getElementById('promoMsg');
+  const code = (inp.value || '').trim().toLowerCase();
+  if (!code) return;
+  const promo = Object.prototype.hasOwnProperty.call(PROMO_CODES, code) ? PROMO_CODES[code] : null;
+  if (!promo){ sfx('error'); msg.textContent = 'Code inconnu.'; return; }
+  const c = COIN.get();
+  if (c.promos[code]){ sfx('error'); msg.textContent = 'Ce code a déjà été utilisé.'; return; }
+  c.promos[code] = true;
+  if (promo.add) c.balance += promo.add;
+  if (promo.unlimited) c.unlimited = true;
+  COIN.save(c); sfx('coin');
+  msg.textContent = promo.label + ' ✓';
+  inp.value = '';
+  toast(promo.label);
+}
 function awardPure(code, score){
   if (score === null || score > 30 || !code) return;
   const c = COIN.get(); if (c.seen[code]) return;     // une récompense par produit
@@ -5032,5 +5066,5 @@ function setJacques(score){
 }
 </script>
 <script>updateSolde(); document.addEventListener('DOMContentLoaded', updateSolde);</script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4a4cbdee95e782a',t:'MTc5MTk2MjE2Mw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4a4d90ef8aa9edf',t:'MTc5MTk2MjcwMw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
